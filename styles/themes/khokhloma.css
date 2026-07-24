@@ -1,0 +1,26 @@
+/* Khokhloma — хохлома. Gold, cinnabar, lacquer black. DESIGN-BRIEF §5. */
+
+[data-theme="khokhloma"] {
+  --ink: #f1e4c9; /* light text on dark ground */
+  --ground: #120c08; /* warm lacquer black */
+  --linen: #efe4ce; /* light alternate ground */
+  --gold: #d9a22b;
+  --cinnabar: #a8261c; /* true cinnabar, not fire-engine red */
+  --ember: #6e1a10;
+
+  --surface: var(--linen);
+  --muted: color-mix(
+    in srgb,
+    var(--ink) 65%,
+    transparent
+  ); /* 6.85:1 against --ground */
+  --accent: var(--cinnabar);
+  --rule: color-mix(
+    in srgb,
+    var(--ink) 20%,
+    transparent
+  ); /* dark-theme rule per DESIGN-BRIEF §7 */
+  /* Focus ring deliberately NOT --accent: cinnabar only reaches 2.74:1 on
+     this ground, below the 3:1 UI-contrast minimum. --gold clears 8.46:1. */
+  --focus: var(--gold);
+}

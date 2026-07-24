@@ -79,6 +79,10 @@ A theme is **only** a set of CSS custom properties plus an ornament folder. Swit
 
 If you find yourself writing `if (theme === 'gzhel')`, the token set is missing a variable. Add the variable.
 
+**Resolved (Session 1):** the tokens above (`--ink`, `--ground`, `--accent`, plus `--surface`, `--muted`, `--rule`, `--focus`) are a *shared semantic layer* every theme file guarantees. Each theme file also defines its own literal DESIGN-BRIEF §5 colours (unprefixed within its own `[data-theme="x"]` scope, e.g. `--cobalt`/`--deep`/`--wash` in Gzhel) for bespoke per-theme work — ornaments, gradients. Shared primitives read only the semantic layer. Full mapping table, including where a theme's `--rule` or `--focus` deliberately doesn't equal its `--accent` (contrast failures, missing brief values), is in `DESIGN-BRIEF.md` §5a — read it before adding a fifth theme or a new shared primitive.
+
+Note the secondary-text token is named **`--muted`**, not `--shadow` — the brief originally called it `--house-shadow`, which reads as a box-shadow token to anyone skimming the codebase, and this site bans box-shadows outright. Renamed in both docs.
+
 ## Non-negotiable
 
 **Performance.** Heavy imagery plus heavy motion — this will get slow unless it's defended at every step.

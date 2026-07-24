@@ -48,7 +48,7 @@ The main page, corporate page, checkout, and all chrome. **No colour of its own*
 --house-ink:      #17150F   /* text, near-black, warm */
 --house-ground:   #FBFAF7   /* page — bright, not cream */
 --house-bisque:   #E9E4DA   /* unglazed porcelain, section grounds */
---house-shadow:   #6E685D   /* secondary text */
+--house-muted:    #6E685D   /* secondary text (named --house-shadow originally — renamed, see §5a: "shadow" reads as a box-shadow token, which this site bans) */
 --house-gilt:     #A88B4A   /* hairlines and rules ONLY, never a fill */
 ```
 
@@ -96,6 +96,26 @@ Polychrome bouquet on black lacquer, gold рим.
 ```
 
 **Contrast check required on all three dark themes**, including focus rings. Don't assume the house focus ring is visible on `#0A0A0C`.
+
+### 5a. Resolved: the shared semantic layer (Session 1)
+
+This file gives each theme its own prefixed, theme-specific colours (above). `CLAUDE.md`'s theming section instead shows components reading generic tokens (`--ink`, `--ground`, `--accent`) that get redefined per `data-theme`. Both are correct, at different layers — resolved in Session 1 as follows, so it isn't re-litigated:
+
+Every theme file defines two layers:
+- **The literal colours above**, unprefixed within their own `[data-theme="x"]` scope (e.g. `--cobalt`, `--deep`, `--wash` inside the Gzhel block) — for bespoke per-theme work: gradients, ornaments, anything craft-specific.
+- **A shared semantic layer every theme guarantees**, which shared primitives (buttons, type, rules) consume so no component ever branches on theme:
+
+| Semantic token | House | Gzhel | Khokhloma | Zhostovo |
+|---|---|---|---|---|
+| `--ink` | ink | ink | ink | ink |
+| `--ground` | ground | ground | ground | ground |
+| `--surface` | bisque | glaze | linen | *derived* — no literal alt-surface was given for this theme; `--ground` lightened slightly toward `--ink` (not a `--blush`/`--rose` tint, which would colour every alternating section pink) |
+| `--muted` | muted (literal, above) | *derived* — `--ink` at 65% opacity (5.27:1 against `--ground`) | *derived* — `--ink` at 65% opacity (6.85:1) | *derived* — `--ink` at 65% opacity (7.16:1) |
+| `--accent` | gilt | cobalt | cinnabar | gold |
+| `--rule` | gilt | **wash** — not ink@20%. The diluted мазок-с-тенью stroke *is* this theme's hairline concept; a neutral grey would waste it. Overrides §7's "1px `--gilt` on light themes," which assumed a gilt-equivalent Gzhel doesn't have. | ink @ 20% (per §7) | ink @ 20% (per §7) |
+| `--focus` | gilt (3.12:1 against `--ground`) | cobalt (10.66:1) | **gold**, not cinnabar — cinnabar only reaches 2.74:1 against `#120C08`, below the 3:1 UI-contrast minimum; gold clears 8.46:1 | gold (8.25:1, same as `--accent` here) |
+
+No new literal hex values were invented for `--muted`/`--surface` where the brief was silent — both are formulas (opacity mix / colour-mix) rather than picked colours, so they move automatically if the underlying palette ever changes.
 
 ---
 

@@ -1,0 +1,16 @@
+/* House — the default, deliberately colourless. DESIGN-BRIEF §5. */
+
+[data-theme="house"] {
+  --ink: #17150f;
+  --ground: #fbfaf7;
+  --bisque: #e9e4da;
+  --muted: #6e685d; /* literal value from the brief; renamed from --house-shadow */
+  --gilt: #a88b4a; /* hairlines and rules ONLY, never a fill */
+
+  --surface: var(--bisque);
+  --accent: var(--gilt);
+  --rule: var(--gilt);
+  --focus: var(
+    --gilt
+  ); /* 3.12:1 against --ground — passes the 3:1 UI-contrast minimum */
+}

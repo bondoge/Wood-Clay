@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# generated screenshots (npm run shots)
+/screenshots/
+
 # production
 /build
 

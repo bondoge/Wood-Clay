@@ -1,0 +1,40 @@
+/* Wood&Clay design tokens — theme-independent. DESIGN-BRIEF.md §6/§7. */
+
+:root {
+  --radius: 0px;
+  --rule-weight: 1px;
+  --tracking-wide: 0.08em;
+
+  /* Spacing scale — DESIGN-BRIEF §7 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+  --space-11: 192px;
+
+  /* Section padding aliases — DESIGN-BRIEF §7 */
+  --section-padding-mobile: var(--space-8);
+  --section-padding-desktop: var(--space-10);
+
+  /* Type scale — DESIGN-BRIEF §6 */
+  --text-1: 0.75rem;
+  --text-2: 0.875rem;
+  --text-3: 1rem;
+  --text-4: 1.25rem;
+  --text-5: 1.5rem;
+  --text-6: 2rem;
+  --text-7: 3rem;
+  --text-8: 4.5rem;
+  --text-9: 7rem;
+
+  --leading-display: 1.05;
+  --leading-body: 1.6;
+  --measure: 68ch;
+  --content-max: 1440px;
+}

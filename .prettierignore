@@ -1,0 +1,8 @@
+.next
+node_modules
+screenshots
+public
+package-lock.json
+
+# hand-maintained planning/reference docs — not reformatted
+*.md

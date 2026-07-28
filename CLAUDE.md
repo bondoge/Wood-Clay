@@ -26,7 +26,7 @@ The failure mode we are avoiding is *сувенирная лавка* — souven
 ## Stack
 
 - Next.js (App Router, ≥16.2.11) · TypeScript strict · Tailwind
-- Content: typed files in `content/`, validated with zod. No CMS.
+- **Catalogue: SQLite (`data/catalog.db`), outside this repo**, shared with a separate seed project (Wildberries API → DB, own repo) and a Directus admin (own app). This site only reads it. Schema is owned here (`db/schema.ts`, Drizzle ORM) — the seed project and Directus conform to it, not the other way round. No CMS in this repo. See **Catalogue architecture** below.
 - **Hosting: Russian datacentre** (Selectel / Timeweb Cloud / Yandex Cloud). Never Vercel — 152-ФЗ requires personal data to be stored on servers in Russia.
 - Payments: **ЮKassa**, including **СБП/QR**. 54-ФЗ fiscalisation via cloud kassa.
 - Analytics: **Яндекс.Метрика**. Never Google Analytics.
@@ -41,6 +41,7 @@ npm run check      # typecheck + lint + build — must pass before you're done
 npm run shots      # Playwright screenshots, all themes, 390 + 1440
 npm run test
 npm run e2e
+npm run db:generate # drizzle-kit generate — regenerate migration SQL after schema.ts changes
 ```
 
 ## Layout
@@ -52,14 +53,32 @@ app/
 components/ui/             primitives
 components/ornament/       SVG ornament + motion components
 components/site/           header, footer, nav
-content/pieces/            one file per object
-content/workshops/         own workshop + partner ateliers
-content/schema.ts          zod — invalid content fails the build
+db/
+  schema.ts                Drizzle tables (products, workshops, masters) — single source of truth
+  client.ts                connection; requires CATALOG_DB_PATH, no fallback
+  validators.ts            zod mirror of schema.ts, via drizzle-zod
+drizzle/                   generated migration SQL — the DDL contract the seed project/Directus conform to
+lib/catalog.ts             the read layer — listPublished, byStyle, flagships, bySlug. Pages import this, never raw SQL, never db/schema.ts directly.
 styles/themes/             gzhel.css, khokhloma.css, zhostovo.css, house.css
 public/ornaments/          optimised SVG, one folder per style
 DESIGN-BRIEF.md            visual direction — read before any UI work
 MOTION-SPEC.md             the complete motion inventory — read before any animation
 ```
+
+## Catalogue architecture
+
+~1000 products live in `data/catalog.db`, a SQLite file **outside this repo** (path via the required `CATALOG_DB_PATH` env var — see `.env.example`). Three systems share it:
+- A **seed project** (separate repo) pulls content and prices from the Wildberries API and upserts rows, matched on `(wb_account, wb_article)`.
+- **Directus** (separate app) is where products get curated: style corrected, price/stock kept current, `published`/`is_flagship` set, rich `own_title`/`own_story`/`own_images` written.
+- **This site reads only**, through `lib/catalog.ts`. Never raw SQL in a page, never a query that can return an unpublished row.
+
+Every `products` column is one of two ownership groups (see the comments in `db/schema.ts`):
+- **WB-synced** (`wb_article`, `wb_account`, `source_title`, `source_description`, `source_images`, `product_type`, `imported_at`) — the seed script's upsert writes these, and only these, on every run.
+- **Manually-managed** (`slug`, `price_rub`, `stock`, `style`, `style_confidence`, `style_reviewed`, `published`, `is_flagship`, `sort_order`, `own_images`, `own_title`, `own_story`, `workshop_id`, `master_id`) — Directus owns these. A seed re-run must never write to this group, or it clobbers a human's edit.
+
+Flagship pieces (`is_flagship=true`) are regular rows, not a separate local-file system — see the reasoning in this repo's history if that's ever revisited; the short version is `own_*` fields already cover bespoke content, and bespoke *assets* (a commissioned ornament SVG, a turntable sprite) are files in `public/`, keyed by slug, regardless of where the row lives.
+
+After changing `db/schema.ts`, run `npm run db:generate` and commit the resulting migration in `drizzle/` — that migration is the actual contract, not the TypeScript.
 
 ---
 

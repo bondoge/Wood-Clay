@@ -75,25 +75,75 @@ No UI this session.
 *Prerequisites: sessions 1–2, plus your real copy and past-order photos. **This is the deadline page — target early September.***
 
 ```
-Build /korporativnye-podarki. Read DESIGN-BRIEF §13 for its single job.
+Build the page at /korporativnye-podarki. Read DESIGN-BRIEF §13 for its single
+job, CLAUDE.md for constraints, and MOTION-SPEC (including the new M10 and M11)
+for motion. Propose the plan before building.
 
-This page is a sales document, not an exhibition. Per MOTION-SPEC §3 it is
-exempt from ornament entirely: M3 and M7 only.
+All copy is in content/corporate.ts — I've written it, use it VERBATIM. Do NOT
+generate or paraphrase any Russian marketing copy. If any section below has no
+matching copy in that file, STOP and tell me which — don't invent it.
 
-Sections, in this order:
-hero → what we make → why hand-made matters for corporate gifting →
-branding options → volume tiers and lead times → past orders →
-PDF catalogue download → quote form → contact
+House theme. This is a sales/ordering page, not an exhibition — restrained.
 
-The quote form collects: company, contact person, phone, Telegram,
-quantity, budget per gift, deadline, branding needed, delivery region.
-It needs an unchecked consent checkbox linking to the privacy policy —
-never pre-checked, per CLAUDE.md.
+SECTIONS, in this order (all from content/corporate.ts):
+hero → whatWeMake → whyHandmade → reviews → packaging → bulk → custom →
+pdf → form → contact
 
-Form submissions post to our own API route and notify a Telegram bot.
-No third-party form services, no endpoints outside Russia.
+TWO DISTINCT CALLS TO ACTION — do not merge them:
+- bulk.cta ("Рассчитать заказ") → scrolls to / opens the quote FORM below.
+- custom.cta ("Обсудить в Telegram") → links DIRECTLY to t.me/<handle>
+  (I'll put the handle in — leave it as a clearly-marked constant at the top).
+  No form for custom orders; it's a direct human conversation.
 
-Put Telegram and phone in the sticky header. Russian B2B runs on Telegram.
+REVIEWS (M10 + M11), the section that needs the most care:
+- Each review in corporate.ts reviews.items renders as a card: the customer's
+  first name, 5 stars DRAWN in the active theme (from `stars`, not an image),
+  the quote text in our typography (NOT a screenshot), and their photo(s).
+  Image URLs = reviews.baseUrl + each filename in `images[]`.
+- Reviews with multiple images use M10 photo-fan: fanned, overlapping, natural
+  aspect ratios (no square crop), hover-to-front on desktop, slow auto-cycle
+  on mobile. Single-image reviews render one photo flat.
+- Behind the whole section: M11 review-grid-columns — the dark, dim, slowly
+  scrolling vertical columns of images from reviews/grid/. It must stay quiet
+  behind the bright review cards. Keep it dark and slow.
+- FILENAMES for the grid: do NOT hardcode them or assume a numeric range
+  (there are gaps and mixed .webp/.jpg). Write a small BUILD-TIME script that
+  lists the reviews/grid/ bucket prefix (S3 list-objects, using the S3 creds
+  already in the seed project's .env pattern — read them from this repo's .env,
+  don't hardcode) and generates content/reviews-grid.ts with the actual
+  filename list. The M11 component reads that generated file. Also downscale
+  those grid images to ~600px long edge during that build step if the sources
+  are large — they're dim background. Tell me how to re-run the script.
+
+QUOTE FORM (bulk path): collects the fields in corporate.ts form.fields.
+Unchecked consent checkbox linking to the privacy policy, never pre-checked.
+- Posts to our own Next.js API route. No third-party form services, nothing
+  outside Russia.
+- The route sends the lead to Telegram via TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID
+  from .env (already set). Never hardcode them; fail loudly in dev if missing.
+- Telegram-notification only — do NOT store submissions in a database.
+- Add a honeypot field or simple rate-limit (public form, spam).
+
+PDF: pdf.cta button is present, but I have NO pdf file yet — render the button
+disabled or with a "скоро" state, and do NOT wire a broken link. Tell me where
+to drop the PDF later and what to change to enable it.
+
+STICKY HEADER: Telegram + phone visible (values in corporate.ts contact).
+
+MOTION overall: per MOTION-SPEC — M3 (brush-underline) and M7 (reveal) for the
+page, plus M10/M11 for reviews. No ornament (per MOTION-SPEC §3 this page is
+ornament-exempt). Everything behind prefers-reduced-motion with the finished
+state as default.
+
+IMAGES: next/image with explicit sizes, AVIF, for review photos. The reviews/
+images and reviews/grid/ images are on Selectel — make sure next/image is
+configured to allow that remote domain
+(1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru).
+
+DONE means: npm run check passes; npm run shots at 390 + 1440 (House theme),
+and you've looked at the 390 output — the fanned reviews and the column
+background are the things most likely to break on mobile. Tell me what you
+skipped or couldn't verify (e.g. the PDF, the real Telegram handle).
 
 House theme only. Copy is in content/corporate.ts — I've written it, use it verbatim.
 ```

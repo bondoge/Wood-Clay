@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import { cormorant, golosText } from "@/styles/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Wood&Clay — фарфор ручной росписи",
+  title: "Нам доверяют — Wood&Clay",
   description:
-    "Дом, который курирует и расписывает фарфор в традициях гжели, хохломы и жостова.",
+    "Отзывы покупателей о фарфоровых игрушках и фигурках ручной работы Wood&Clay.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -14,13 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="ru"
-      className={`${cormorant.variable} ${golosText.variable} h-full antialiased`}
-    >
-      <body data-theme="house" className="flex min-h-full flex-col">
-        {children}
-      </body>
+    <html lang="ru">
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

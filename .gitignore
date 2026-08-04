@@ -40,6 +40,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# ssh keys (never commit private keys)
+selectel_wood_clay
+selectel_wood_clay.pub
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

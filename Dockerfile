@@ -10,6 +10,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build-time-only placeholder: catalog pages are force-dynamic (never
+# statically generated), but Next still imports the route module during
+# `next build` to read its config, which trips db/client.ts's startup guard
+# unless CATALOG_DB_PATH is non-empty. No real DB is read at build time, and
+# this ENV does not carry into the runner stage below.
+ENV CATALOG_DB_PATH=/data/catalog.db
 RUN npm run build
 
 # ---- runner: minimal production image ----

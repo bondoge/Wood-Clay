@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const BASE_URL =
@@ -8,9 +9,9 @@ const BASE_URL =
 const CATALOG_PDF_URL =
   "https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/documents/catalog.pdf";
 
-// TODO: no catalog-listing page or account system exists yet — both point at
-// home for now, same placeholder convention used elsewhere on this site.
-const CATALOG_HREF = "/";
+const CATALOG_HREF = "/catalog";
+// TODO: no account system exists yet — points at home for now, same
+// placeholder convention used elsewhere on this site.
 const ACCOUNT_HREF = "/";
 
 type Review = {
@@ -195,7 +196,7 @@ export default function Home() {
 
   return (
     <>
-      <a
+      <Link
         className="catalog-cta"
         href={CATALOG_HREF}
         onPointerMove={(event) => {
@@ -212,7 +213,7 @@ export default function Home() {
       >
         <span>Смотреть каталог</span>
         <span className="catalog-cta__arrow" aria-hidden="true">↗</span>
-      </a>
+      </Link>
 
     <main>
 
@@ -259,8 +260,8 @@ export default function Home() {
           </nav>
 
           <nav className="site-header__actions" aria-label="Каталог и кабинет">
-            <a href={CATALOG_HREF}>Каталог</a>
-            <a href={ACCOUNT_HREF}>Мой кабинет</a>
+            <Link href={CATALOG_HREF}>Каталог</Link>
+            <Link href={ACCOUNT_HREF}>Мой кабинет</Link>
           </nav>
         </header>
 
@@ -767,7 +768,7 @@ export default function Home() {
             <a href="#top">Главная</a>
             <a href="#custom">Корпоративным клиентам</a>
             <a href="#catalog-pdf">Каталог</a>
-            <a href={ACCOUNT_HREF}>Личный кабинет</a>
+            <Link href={ACCOUNT_HREF}>Личный кабинет</Link>
           </nav>
 
           <div className="footer-column footer-column--contacts">

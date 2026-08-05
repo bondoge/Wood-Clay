@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ProxyAgent } from "node:undici";
 import { z } from "zod";
 
 const CONTACT_METHOD_LABELS: Record<string, string> = {
@@ -62,11 +63,21 @@ async function sendTelegramNotification(fields: {
     ...(fields.message?.trim() ? [`Комментарий: ${fields.message}`] : []),
   ];
 
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  // api.telegram.org is unreachable from the production server's network
+  // path (connection times out — infrastructure-level, not app config), so
+  // this one call is routed through a local proxy when configured. Nothing
+  // else in the app needs this.
+  const proxyUrl = process.env.TELEGRAM_PROXY_URL;
+  const init: RequestInit & { dispatcher?: ProxyAgent } = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text: lines.join("\n") }),
-  });
+  };
+  if (proxyUrl) {
+    init.dispatcher = new ProxyAgent(proxyUrl);
+  }
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, init);
 
   const body = await res.json();
   if (!res.ok || !body.ok) {

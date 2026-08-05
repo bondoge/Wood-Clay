@@ -1,0 +1,43 @@
+{
+  "log": { "loglevel": "warning" },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": 1080,
+      "protocol": "http",
+      "settings": {}
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "YOUR_VLESS_SERVER_HOST",
+            "port": 443,
+            "users": [
+              {
+                "id": "YOUR_VLESS_UUID",
+                "encryption": "none"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "wsSettings": {
+          "path": "/vpn",
+          "host": "YOUR_VLESS_SERVER_HOST"
+        },
+        "tlsSettings": {
+          "serverName": "YOUR_VLESS_SERVER_HOST",
+          "fingerprint": "firefox",
+          "allowInsecure": false
+        }
+      }
+    }
+  ]
+}

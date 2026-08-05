@@ -44,6 +44,9 @@ yarn-error.log*
 selectel_wood_clay
 selectel_wood_clay.pub
 
+# xray proxy config (contains the VLESS server credential)
+xray/config.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    image: woodandclay:latest
+    container_name: woodandclay
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /opt/woodclay-data:/data:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - xray
+
+  # Local HTTP proxy over the VLESS tunnel, used only for the outbound
+  # Telegram API call (see app/api/corporate-quote/route.ts) — Telegram's
+  # servers are unreachable directly from this network path. Not exposed to
+  # the host; only "app" can reach it, via the internal compose network.
+  xray:
+    image: ghcr.io/xtls/xray-core:latest
+    container_name: woodandclay-xray
+    restart: unless-stopped
+    volumes:
+      - ./xray/config.json:/etc/xray/config.json:ro

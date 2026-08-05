@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ProxyAgent } from "node:undici";
+import { ProxyAgent } from "undici";
 import { z } from "zod";
 
 const CONTACT_METHOD_LABELS: Record<string, string> = {

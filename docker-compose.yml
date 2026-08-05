@@ -21,5 +21,9 @@ services:
     image: ghcr.io/xtls/xray-core:latest
     container_name: woodandclay-xray
     restart: unless-stopped
+    # The image defaults to loading every .json file in its own baked-in
+    # /usr/local/etc/xray/ confdir — passing -c here overrides that and
+    # forces it to use only our mounted config instead.
+    command: ["run", "-c", "/etc/xray/config.json"]
     volumes:
       - ./xray/config.json:/etc/xray/config.json:ro

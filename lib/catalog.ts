@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
 import { productSelectSchema, type Product, type Style } from "@/db/validators";
@@ -48,6 +48,26 @@ export async function flagships(): Promise<Product[]> {
     .where(and(eq(products.published, true), eq(products.isFlagship, true)))
     .orderBy(asc(products.sortOrder));
   return parseRowsLenient(rows);
+}
+
+// Same style OR same raw category — broader than a strict style match, so a
+// gzhel figurine still surfaces khokhloma/author pieces of the same kind.
+export async function relatedTo(product: Product, limit = 3): Promise<Product[]> {
+  const rows = await db
+    .select()
+    .from(products)
+    .where(and(
+      eq(products.published, true),
+      ne(products.id, product.id),
+      or(eq(products.style, product.style), eq(products.productType, product.productType)),
+    ))
+    .limit(limit);
+  return parseRowsLenient(rows);
+}
+
+export async function countPublished(): Promise<number> {
+  const rows = await db.select({ count: count() }).from(products).where(eq(products.published, true));
+  return rows[0]?.count ?? 0;
 }
 
 export async function bySlug(slug: string): Promise<Product | null> {

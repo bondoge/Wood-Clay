@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Нам доверяют — Wood&Clay",
+  title: "Wood&Clay — фарфоровые изделия ручной работы",
   description:
-    "Отзывы покупателей о фарфоровых игрушках и фигурках ручной работы Wood&Clay.",
+    "Фарфоровые ёлочные игрушки, фигурки и корпоративные подарки, расписанные вручную.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

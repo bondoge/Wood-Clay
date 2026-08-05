@@ -1,12 +1,13 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import AddToCartButton from "./AddToCartButton";
-import { makeTelegramOrder, useCart } from "./CartContext";
+import { useCart } from "./CartContext";
 import type { ProductView } from "./product-view";
 import { formatPrice } from "./catalog-utils";
 
-export function CatalogHeader() {
+export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "account" }) {
   return (
     <header className="catalog-nav">
       <Link className="catalog-brand" href="/" aria-label="Wood&Clay — на главную">
@@ -21,8 +22,8 @@ export function CatalogHeader() {
       </nav>
 
       <div className="catalog-nav__actions">
-        <Link className="is-current" href="/catalog">Каталог</Link>
-        <Link href="/#account">Мой кабинет</Link>
+        <Link className={current === "catalog" ? "is-current" : undefined} href="/catalog">Каталог</Link>
+        <Link className={current === "account" ? "is-current" : undefined} href="/account">Мой кабинет</Link>
         <MiniCart />
       </div>
     </header>
@@ -30,16 +31,39 @@ export function CatalogHeader() {
 }
 
 function MiniCart() {
-  const { lines, itemCount, total, drawerOpen, setDrawerOpen, removeItem } = useCart();
+  const {
+    lines, itemCount, total, drawerOpen, lastAdded,
+    setDrawerOpen, dismissAddedNotice, removeItem,
+  } = useCart();
+  const cartRootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!cartRootRef.current?.contains(event.target as Node)) setDrawerOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [drawerOpen, setDrawerOpen]);
 
   return (
-    <div className="mini-cart">
+    <div className="mini-cart" ref={cartRootRef}>
       <button
         className="mini-cart__trigger"
         type="button"
         aria-expanded={drawerOpen}
         aria-controls="mini-cart-panel"
-        onClick={() => setDrawerOpen(!drawerOpen)}
+        onClick={() => {
+          dismissAddedNotice();
+          setDrawerOpen(!drawerOpen);
+        }}
       >
         <span>Корзина</span>
         <b>{itemCount}</b>
@@ -72,7 +96,6 @@ function MiniCart() {
             <div className="mini-cart__summary"><span>Итого</span><strong>{formatPrice(total)}</strong></div>
             <div className="mini-cart__actions">
               <Link href="/catalog/cart" onClick={() => setDrawerOpen(false)}>Открыть корзину</Link>
-              <a href={makeTelegramOrder(lines)} target="_blank" rel="noreferrer">Оформить заказ ↗</a>
             </div>
           </>
         ) : (
@@ -83,6 +106,16 @@ function MiniCart() {
           </div>
         )}
       </aside>
+
+      <div className={`cart-added-notice${lastAdded ? " is-visible" : ""}`} role="status" aria-live="polite" aria-atomic="true">
+        {lastAdded && (
+          <>
+            <img src={lastAdded.images[0]} alt="" width="52" height="62" />
+            <div><strong>Добавлено в корзину</strong><span>{lastAdded.title}</span></div>
+            <Link href="/catalog/cart" onClick={dismissAddedNotice}>Корзина</Link>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -130,7 +163,7 @@ export function ProductCard({ product }: { product: ProductView }) {
           <strong>{formatPrice(product.price)}</strong>
           <div>
             <Link href={`/catalog/${product.slug}`} aria-label={`Подробнее о ${product.title}`}>Подробнее</Link>
-            <AddToCartButton product={product} className="product-card__add" />
+            <AddToCartButton product={product} className="product-card__add" shortLabel />
           </div>
         </div>
       </div>
@@ -156,7 +189,8 @@ export function CatalogFooter() {
             <Link href="/">Главная</Link>
             <Link href="/#custom">Корпоративным клиентам</Link>
             <Link href="/catalog">Каталог</Link>
-            <Link href="/#account">Личный кабинет</Link>
+            <Link href="/account">Личный кабинет</Link>
+            <Link href="/privacy">Политика конфиденциальности</Link>
           </nav>
 
           <div className="footer-column footer-column--contacts">
@@ -176,7 +210,7 @@ export function CatalogFooter() {
         <div className="site-footer__meta">
           <span>© 2026 Wood&Clay</span>
           <span>Сделано вручную в России</span>
-          <a href="mailto:woodandclay.help@mail.ru">Нужна помощь?</a>
+          <Link href="/privacy">Политика конфиденциальности</Link>
         </div>
       </div>
 

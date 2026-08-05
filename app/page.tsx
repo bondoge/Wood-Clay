@@ -10,9 +10,7 @@ const CATALOG_PDF_URL =
   "https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/documents/catalog.pdf";
 
 const CATALOG_HREF = "/catalog";
-// TODO: no account system exists yet — points at home for now, same
-// placeholder convention used elsewhere on this site.
-const ACCOUNT_HREF = "/";
+const ACCOUNT_HREF = "/account";
 
 type Review = {
   name: string;
@@ -58,6 +56,12 @@ const contactMethods: Record<
 
 const reviews: Review[] = [
   {
+    name: "Анна",
+    text: "Всё как в карточке. Лошадка — восторг! Спасибо за 100% соответствие: не часто встретишь, чтобы картинка и товар были идентичны. И спасибо производителю за красоту. Ещё и подарок положили!",
+    images: ["anna.PNG"],
+    objectPosition: "48% 50%",
+  },
+  {
     name: "Тамара",
     text: "Вживую фигурки оказались ещё круче, чем на фото. Влюбилась в этих кошечек. Буду ещё заказывать другие изделия. К покупке советую!",
     images: ["tamara.PNG"],
@@ -67,12 +71,6 @@ const reviews: Review[] = [
     text: "Очень милая машинка! Качественная, лёгкая, запакована в бумагу, пупырку и коробочку. Ровный рисунок, петелька для крепления и шнурок. Самая первая висит на ёлке в этом году. Игрушка с душой — а в подарок ещё крошечная божья коровка на магните.",
     images: ["svetlana.PNG"],
     objectPosition: "50% 48%",
-  },
-  {
-    name: "Анна",
-    text: "Всё как в карточке. Лошадка — восторг! Спасибо за 100% соответствие: не часто встретишь, чтобы картинка и товар были идентичны. И спасибо производителю за красоту. Ещё и подарок положили!",
-    images: ["anna.PNG"],
-    objectPosition: "48% 50%",
   },
   {
     name: "Оксана",
@@ -613,7 +611,7 @@ export default function Home() {
                 <span>
                   Отправляя форму, вы соглашаетесь на обработку контактных
                   данных в соответствии с{" "}
-                  <a href="/politika-konfidentsialnosti">
+                  <a href="/privacy">
                     политикой конфиденциальности
                   </a>
                   .
@@ -767,7 +765,7 @@ export default function Home() {
             <p>Навигация</p>
             <a href="#top">Главная</a>
             <a href="#custom">Корпоративным клиентам</a>
-            <a href="#catalog-pdf">Каталог</a>
+            <Link href={CATALOG_HREF}>Каталог</Link>
             <Link href={ACCOUNT_HREF}>Личный кабинет</Link>
           </nav>
 
@@ -801,7 +799,7 @@ export default function Home() {
         <div className="site-footer__meta">
           <span>© 2026 Wood&Clay</span>
           <span>Сделано вручную в России</span>
-          <a href="mailto:woodandclay.help@mail.ru">Нужна помощь?</a>
+          <a href="/privacy">Политика конфиденциальности</a>
         </div>
       </div>
 

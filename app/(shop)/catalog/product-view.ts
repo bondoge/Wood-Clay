@@ -24,8 +24,7 @@ export type ProductView = {
 const STYLE_LABELS: Record<Style, string> = {
   gzhel: "Гжель",
   khokhloma: "Хохлома",
-  zhostovo: "Жостово",
-  other: "Другое",
+  author: "Авторская роспись",
 };
 
 export function toProductView(product: Product): ProductView {

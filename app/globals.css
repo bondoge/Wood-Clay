@@ -2447,8 +2447,8 @@ button:focus-visible {
   }
 
   .spotlight__body {
-    height: 310px;
-    min-height: 310px;
+    height: 360px;
+    min-height: 360px;
     padding: 24px 22px 78px;
   }
 
@@ -2456,9 +2456,32 @@ button:focus-visible {
     display: none;
   }
 
+  .spotlight blockquote {
+    min-height: 0;
+    margin-top: 20px;
+    padding-right: 8px;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: rgba(41, 23, 19, 0.28) transparent;
+    scrollbar-width: thin;
+  }
+
+  .spotlight blockquote::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .spotlight blockquote::-webkit-scrollbar-thumb {
+    border-radius: 99px;
+    background: rgba(41, 23, 19, 0.28);
+  }
+
   .spotlight blockquote p {
+    display: block;
+    overflow: visible;
     font-size: 17px;
     line-height: 1.46;
+    -webkit-line-clamp: unset;
   }
 
   .spotlight__footer {
@@ -2605,13 +2628,31 @@ button:focus-visible {
   }
 
   .catalog-preview {
-    width: 570px;
-    height: 670px;
-    margin: -2px auto -245px;
+    width: min(100%, 390px);
+    height: auto;
+    aspect-ratio: 570 / 670;
+    margin: 0 auto;
     justify-self: center;
-    transform: scale(0.62);
-    transform-origin: top center;
+    transform: none;
   }
+
+  .catalog-preview__shadow { width: 75%; height: 11%; right: 3%; bottom: 4%; }
+  .catalog-preview__sheet, .catalog-cover { width: 75.5%; height: 90.8%; right: 6%; bottom: 7%; }
+  .catalog-preview__sheet--back { transform: translate(-7%, 3%) rotate(-8deg); }
+  .catalog-preview__sheet--middle { transform: translate(-3.5%, 1.2%) rotate(-3.8deg); }
+  .catalog-cover__brand { height: 11%; padding: 0 6.5%; }
+  .catalog-cover__mark { width: 7%; height: auto; }
+  .catalog-cover__wordmark { width: 22%; }
+  .catalog-cover__art { width: 81%; height: 58%; top: 15%; left: 10%; }
+  .catalog-cover__art > span { width: 80%; height: auto; aspect-ratio: 1; }
+  .catalog-cover__art img { width: auto; height: 88%; }
+  .catalog-cover__copy { right: 7%; bottom: 11.5%; left: 7%; }
+  .catalog-cover__copy p { margin-bottom: 6px; font-size: 6px; }
+  .catalog-cover__copy h3 { font-size: clamp(17px, 5.7vw, 23px); }
+  .catalog-cover footer { right: 7%; bottom: 4%; left: 7%; font-size: 6px; }
+  .catalog-preview__label { width: 48%; min-height: 52px; right: 0; bottom: 13%; grid-template-columns: 32px 1fr; border-radius: 14px; }
+  .catalog-preview__label > span { width: 32px; height: 32px; }
+  .catalog-preview__label p { font-size: 8px; }
 
   .site-footer {
     min-height: 0;

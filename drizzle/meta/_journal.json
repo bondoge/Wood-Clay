@@ -8,6 +8,13 @@
       "when": 1785233123129,
       "tag": "0000_sad_klaw",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785970637185,
+      "tag": "0001_fat_karma",
+      "breakpoints": true
     }
   ]
 }

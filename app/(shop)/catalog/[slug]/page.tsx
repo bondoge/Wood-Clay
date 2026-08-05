@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { bySlug, byStyle } from "@/lib/catalog";
+import { bySlug, relatedTo } from "@/lib/catalog";
 import { CatalogFooter, CatalogHeader, ProductCard } from "../catalog-components";
 import { formatPrice } from "../catalog-utils";
 import { toProductView } from "../product-view";
 import ProductGallery from "../ProductGallery";
 import AddToCartButton from "../AddToCartButton";
+import CheckoutNowButton from "../CheckoutNowButton";
 import "../catalog.css";
 
 // Same reasoning as the catalog listing — price/stock/published state
@@ -34,13 +35,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const view = toProductView(product);
 
-  const sameStyle = await byStyle(product.style);
-  const related = sameStyle
-    .filter((item) => item.id !== product.id)
-    .slice(0, 3)
-    .map(toProductView);
-
-  const telegramHref = `https://t.me/Kiss_Love_odsk?text=${encodeURIComponent(`Здравствуйте! Интересует ${view.title}, артикул ${view.article}.`)}`;
+  const related = (await relatedTo(product)).map(toProductView);
 
   return (
     <main className="catalog-page product-page">
@@ -57,10 +52,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <p className="product-detail__price">{formatPrice(view.price)}</p>
           <p className="product-detail__lead">{view.description}</p>
           <AddToCartButton product={view} className="product-detail__add" />
-          <a className="product-detail__contact product-detail__contact--secondary" href={telegramHref} target="_blank" rel="noreferrer">
-            Уточнить и заказать <span aria-hidden="true">↗</span>
-          </a>
-          <p className="product-detail__reply">Консультант ответит в Telegram и поможет с оформлением.</p>
+          <CheckoutNowButton product={view} className="product-detail__contact product-detail__contact--secondary" />
+          <p className="product-detail__reply">Вы сможете выбрать доставку СДЭК и оплатить заказ через ЮKassa.</p>
 
           <dl className="product-detail__facts">
             <div><dt>Материал</dt><dd>Фарфор</dd></div>

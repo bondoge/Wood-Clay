@@ -14,7 +14,31 @@ const SORT_OPTIONS = [
   { value: "stock", label: "Больше в наличии" },
 ];
 
-const STYLE_ORDER = ["gzhel", "khokhloma", "zhostovo", "other"];
+const STYLE_ORDER = ["gzhel", "khokhloma", "author"];
+const STYLE_LABELS: Record<string, string> = {
+  gzhel: "Гжель",
+  khokhloma: "Хохлома",
+  author: "Авторская роспись",
+};
+const FEATURED_CATEGORY_IDS = ["olympic-bear", "jewelry", "christmas", "figurines", "year-symbol"];
+const FEATURED_CATEGORY_LABELS: Record<string, string> = {
+  "olympic-bear": "Олимпийский мишка",
+  jewelry: "Украшения",
+  christmas: "Ёлочные игрушки",
+  figurines: "Фигурки и статуэтки",
+  "year-symbol": "Символ года",
+};
+const STYLE_IMAGE_ARTICLES: Record<string, string> = {
+  gzhel: "403704180",
+  author: "497278688",
+};
+const CATEGORY_IMAGE_ARTICLES: Record<string, string> = {
+  "olympic-bear": "992127613",
+  christmas: "225626203",
+  figurines: "134756413",
+  "year-symbol": "1252955726",
+};
+const JEWELRY_COLLECTION_IMAGE = "https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/products/1/155402178/0-medium.avif";
 const SYNONYMS: Record<string, string[]> = {
   елка: ["ёлка", "елочная", "ёлочная", "новогодняя", "украшение"],
   игрушка: ["украшение", "подвес", "елочная", "ёлочная"],
@@ -22,7 +46,8 @@ const SYNONYMS: Record<string, string[]> = {
   статуэтка: ["фигурка", "скульптура"],
   гжель: ["gzhel", "синяя", "синий"],
   хохлома: ["khokhloma", "золотая", "золотой"],
-  жостово: ["zhostovo", "цветочная", "цветы"],
+  авторская: ["author", "ручная", "роспись"],
+  мишка: ["медведь", "олимпийский"],
   подарок: ["сувенир", "подарочный"],
 };
 
@@ -67,37 +92,72 @@ function scoreProduct(product: ProductView, rawQuery: string) {
   return everyOriginalTokenMatches ? score + 12 : score;
 }
 
+function matchesCategory(product: ProductView, categoryId: string) {
+  const title = normalize(product.title);
+  if (categoryId === "olympic-bear") return title.includes("олимпийск") && title.includes("мишк");
+  if (categoryId === "jewelry") return product.type === "Заколки-автомат";
+  if (categoryId === "christmas") return product.type === "Елочные украшения";
+  if (categoryId === "figurines") return product.type === "Фигурки и статуэтки";
+  if (categoryId === "year-symbol") return title.includes("коза");
+  return categoryId.startsWith("type:") && product.type === categoryId.slice(5);
+}
+
 export default function CatalogClient({ products }: { products: ProductView[] }) {
   const [query, setQuery] = useState("");
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sort, setSort] = useState("relevance");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const catalogRef = useRef<HTMLElement>(null);
 
+  const minCatalogPrice = useMemo(() => Math.min(...products.map((product) => product.price)), [products]);
   const maxCatalogPrice = useMemo(() => Math.max(...products.map((product) => product.price)), [products]);
+  const [minPrice, setMinPrice] = useState(minCatalogPrice);
   const [maxPrice, setMaxPrice] = useState(maxCatalogPrice);
 
-  const styles = useMemo(
-    () => STYLE_ORDER.map((style) => {
-      const product = products.find((item) => item.style === style);
-      return product ? {
-        style,
-        label: product.styleLabel,
-        image: product.images[0],
-        count: products.filter((item) => item.style === style).length,
-      } : null;
-    }).filter(Boolean) as { style: string; label: string; image: string; count: number }[],
-    [products],
-  );
+  const styles = useMemo(() => STYLE_ORDER.map((style) => {
+    const fallbackProduct = products.find((item) => item.style === style);
+    const imageProduct = products.find((item) => item.article === STYLE_IMAGE_ARTICLES[style]);
+    return fallbackProduct ? {
+      style,
+      label: STYLE_LABELS[style],
+      image: imageProduct?.images[0] ?? fallbackProduct.images[0],
+      count: products.filter((item) => item.style === style).length,
+    } : null;
+  }).filter(Boolean) as { style: string; label: string; image: string; count: number }[], [products]);
 
-  const types = useMemo(() => {
+  const categories = useMemo(() => {
     const counts = new Map<string, number>();
     products.forEach((product) => counts.set(product.type, (counts.get(product.type) ?? 0) + 1));
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    const featured = FEATURED_CATEGORY_IDS.map((id) => ({
+      id,
+      label: FEATURED_CATEGORY_LABELS[id],
+      count: products.filter((product) => matchesCategory(product, id)).length,
+    }));
+    const coveredTypes = new Set(["Заколки-автомат", "Елочные украшения", "Фигурки и статуэтки"]);
+    const remaining = Array.from(counts.entries())
+      .filter(([type]) => !coveredTypes.has(type))
+      .sort((a, b) => b[1] - a[1])
+      .map(([type, count]) => ({ id: `type:${type}`, label: type, count }));
+    return [...featured, ...remaining];
   }, [products]);
+
+  const collectionTiles = useMemo(() => [
+    ...styles.map((style) => ({ ...style, id: style.style, kind: "style" as const })),
+    ...FEATURED_CATEGORY_IDS.map((categoryId) => {
+      const category = categories.find((item) => item.id === categoryId)!;
+      const imageProduct = products.find((item) => item.article === CATEGORY_IMAGE_ARTICLES[categoryId]);
+      return {
+        id: categoryId,
+        kind: "category" as const,
+        label: category.label,
+        count: category.count,
+        image: categoryId === "jewelry" ? JEWELRY_COLLECTION_IMAGE : imageProduct?.images[0] ?? products[0].images[0],
+      };
+    }),
+  ], [categories, products, styles]);
 
   const filteredProducts = useMemo(() => {
     const scored = products
@@ -105,7 +165,8 @@ export default function CatalogClient({ products }: { products: ProductView[] })
       .filter(({ product, score }) => (
         score > 0
         && (selectedStyles.length === 0 || selectedStyles.includes(product.style))
-        && (selectedTypes.length === 0 || selectedTypes.includes(product.type))
+        && (selectedCategories.length === 0 || selectedCategories.some((category) => matchesCategory(product, category)))
+        && product.price >= minPrice
         && product.price <= maxPrice
       ));
 
@@ -117,9 +178,10 @@ export default function CatalogClient({ products }: { products: ProductView[] })
       return a.index - b.index;
     });
     return scored.map(({ product }) => product);
-  }, [maxPrice, products, query, selectedStyles, selectedTypes, sort]);
+  }, [maxPrice, minPrice, products, query, selectedCategories, selectedStyles, sort]);
 
-  const activeFilterCount = selectedStyles.length + selectedTypes.length + (maxPrice < maxCatalogPrice ? 1 : 0);
+  const activeFilterCount = selectedStyles.length + selectedCategories.length
+    + (minPrice > minCatalogPrice || maxPrice < maxCatalogPrice ? 1 : 0);
 
   const toggleValue = (
     value: string,
@@ -132,7 +194,8 @@ export default function CatalogClient({ products }: { products: ProductView[] })
   const clearFilters = () => {
     setQuery("");
     setSelectedStyles([]);
-    setSelectedTypes([]);
+    setSelectedCategories([]);
+    setMinPrice(minCatalogPrice);
     setMaxPrice(maxCatalogPrice);
     setSort("relevance");
     setVisibleCount(PAGE_SIZE);
@@ -142,8 +205,12 @@ export default function CatalogClient({ products }: { products: ProductView[] })
     window.setTimeout(() => catalogRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
-  const selectCollection = (style: string) => {
-    setSelectedStyles([style]);
+  const selectCollection = (kind: "style" | "category", id: string) => {
+    setQuery("");
+    setSelectedStyles(kind === "style" ? [id] : []);
+    setSelectedCategories(kind === "category" ? [id] : []);
+    setMinPrice(minCatalogPrice);
+    setMaxPrice(maxCatalogPrice);
     setVisibleCount(PAGE_SIZE);
     scrollToCatalog();
   };
@@ -172,26 +239,26 @@ export default function CatalogClient({ products }: { products: ProductView[] })
       <section className="catalog-collections" aria-labelledby="collections-heading">
         <div className="catalog-section-heading">
           <p className="catalog-eyebrow">Коллекции</p>
-          <h2 id="collections-heading">Выберите характер росписи</h2>
-          <p className="catalog-section-heading__hint">Нажмите на коллекцию — ниже откроется каталог с выбранной росписью.</p>
+          <h2 id="collections-heading">Найдите свою коллекцию</h2>
+          <p className="catalog-section-heading__hint">Выберите роспись или тему — мы сразу покажем подходящие изделия ниже.</p>
         </div>
         <div className="catalog-collection-grid">
-          {styles.map(({ style, label, image, count }) => {
-            const isSelected = selectedStyles.includes(style);
+          {collectionTiles.map(({ id, kind, label, image, count }) => {
+            const isSelected = kind === "style" ? selectedStyles.includes(id) : selectedCategories.includes(id);
             return (
               <button
                 className={`collection-tile${isSelected ? " is-selected" : ""}`}
-                key={style}
+                key={`${kind}:${id}`}
                 type="button"
                 aria-pressed={isSelected}
-                onClick={() => selectCollection(style)}
+                onClick={() => selectCollection(kind, id)}
               >
                 <img src={image} alt="" width="520" height="390" loading="eager" />
                 <span className="collection-tile__veil" />
                 <span className="collection-tile__label">
                   <small>{count} {pluralizeProducts(count)}</small>
                   {label}
-                  <em>Смотреть коллекцию <span aria-hidden="true">↓</span></em>
+                  <em>Смотреть товары <span aria-hidden="true">↓</span></em>
                 </span>
               </button>
             );
@@ -217,11 +284,15 @@ export default function CatalogClient({ products }: { products: ProductView[] })
             {query && <button type="button" onClick={() => setQuery("")} aria-label="Очистить поиск">×</button>}
           </div>
           <button className="catalog-search__submit" type="submit">Найти <span aria-hidden="true">↓</span></button>
-          {(selectedStyles.length > 0 || query) && (
+          {(selectedStyles.length > 0 || selectedCategories.length > 0 || query) && (
             <div className="catalog-active-filters" aria-label="Активные фильтры">
               {selectedStyles.map((style) => {
                 const item = styles.find((candidate) => candidate.style === style);
                 return <button type="button" key={style} onClick={() => setSelectedStyles([])}>{item?.label} <span>×</span></button>;
+              })}
+              {selectedCategories.map((categoryId) => {
+                const item = categories.find((candidate) => candidate.id === categoryId);
+                return <button type="button" key={categoryId} onClick={() => setSelectedCategories((current) => current.filter((id) => id !== categoryId))}>{item?.label} <span>×</span></button>;
               })}
               {query && <button type="button" onClick={() => setQuery("")}>Поиск: «{query}» <span>×</span></button>}
               <button className="catalog-active-filters__clear" type="button" onClick={clearFilters}>Показать всё</button>
@@ -287,14 +358,14 @@ export default function CatalogClient({ products }: { products: ProductView[] })
             </FilterGroup>
 
             <FilterGroup title="Категория">
-              {types.map(([type, count]) => (
-                <label className="catalog-check" key={type}>
+              {categories.map(({ id, label, count }) => (
+                <label className="catalog-check" key={id}>
                   <input
                     type="checkbox"
-                    checked={selectedTypes.includes(type)}
-                    onChange={() => toggleValue(type, setSelectedTypes)}
+                    checked={selectedCategories.includes(id)}
+                    onChange={() => toggleValue(id, setSelectedCategories)}
                   />
-                  <span>{type}</span>
+                  <span>{label}</span>
                   <small>{count}</small>
                 </label>
               ))}
@@ -302,17 +373,27 @@ export default function CatalogClient({ products }: { products: ProductView[] })
 
             <FilterGroup title="Цена">
               <div className="catalog-price-filter">
-                <span>до {formatPrice(maxPrice)}</span>
-                <input
-                  type="range"
-                  min="500"
-                  max={maxCatalogPrice}
-                  step="100"
-                  value={maxPrice}
-                  onChange={(event) => { setMaxPrice(Number(event.target.value)); setVisibleCount(PAGE_SIZE); }}
-                  aria-label="Максимальная цена"
-                />
-                <div><small>500 ₽</small><small>{formatPrice(maxCatalogPrice)}</small></div>
+                <div className="catalog-price-filter__values">
+                  <label><span>От</span><input type="number" min={minCatalogPrice} max={maxPrice} step="40" value={minPrice}
+                    onChange={(event) => { setMinPrice(Math.min(Number(event.target.value), maxPrice)); setVisibleCount(PAGE_SIZE); }}
+                    aria-label="Минимальная цена в рублях" /></label>
+                  <label><span>До</span><input type="number" min={minPrice} max={maxCatalogPrice} step="40" value={maxPrice}
+                    onChange={(event) => { setMaxPrice(Math.max(Number(event.target.value), minPrice)); setVisibleCount(PAGE_SIZE); }}
+                    aria-label="Максимальная цена в рублях" /></label>
+                </div>
+                <div className="catalog-price-filter__sliders" style={{
+                  "--price-start": `${((minPrice - minCatalogPrice) / (maxCatalogPrice - minCatalogPrice)) * 100}%`,
+                  "--price-end": `${((maxPrice - minCatalogPrice) / (maxCatalogPrice - minCatalogPrice)) * 100}%`,
+                } as React.CSSProperties}>
+                  <span aria-hidden="true" />
+                  <input type="range" min={minCatalogPrice} max={maxCatalogPrice} step="40" value={minPrice}
+                    onChange={(event) => { setMinPrice(Math.min(Number(event.target.value), maxPrice - 40)); setVisibleCount(PAGE_SIZE); }}
+                    aria-label="Минимальная цена" />
+                  <input type="range" min={minCatalogPrice} max={maxCatalogPrice} step="40" value={maxPrice}
+                    onChange={(event) => { setMaxPrice(Math.max(Number(event.target.value), minPrice + 40)); setVisibleCount(PAGE_SIZE); }}
+                    aria-label="Максимальная цена" />
+                </div>
+                <div className="catalog-price-filter__bounds"><small>{formatPrice(minCatalogPrice)}</small><small>{formatPrice(maxCatalogPrice)}</small></div>
               </div>
             </FilterGroup>
 

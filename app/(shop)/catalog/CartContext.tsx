@@ -13,7 +13,9 @@ type CartContextValue = {
   itemCount: number;
   total: number;
   drawerOpen: boolean;
+  lastAdded: ProductView | null;
   setDrawerOpen: (open: boolean) => void;
+  dismissAddedNotice: () => void;
   addItem: (product: ProductView) => void;
   removeItem: (id: number) => void;
   setQuantity: (id: number, quantity: number) => void;
@@ -26,6 +28,7 @@ const STORAGE_KEY = "woodclay-cart-v1";
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [lastAdded, setLastAdded] = useState<ProductView | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -47,12 +50,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
   }, [hydrated, lines]);
 
+  useEffect(() => {
+    if (!lastAdded) return;
+    const timeout = window.setTimeout(() => setLastAdded(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [lastAdded]);
+
   const value = useMemo<CartContextValue>(() => ({
     lines,
     itemCount: lines.reduce((sum, line) => sum + line.quantity, 0),
     total: lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0),
     drawerOpen,
+    lastAdded,
     setDrawerOpen,
+    dismissAddedNotice() {
+      setLastAdded(null);
+    },
     addItem(product) {
       setLines((current) => {
         const existing = current.find((line) => line.product.id === product.id);
@@ -63,7 +76,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
         return [...current, { product, quantity: 1 }];
       });
-      setDrawerOpen(true);
+      setLastAdded(product);
     },
     removeItem(id) {
       setLines((current) => current.filter((line) => line.product.id !== id));
@@ -77,7 +90,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     clearCart() {
       setLines([]);
     },
-  }), [drawerOpen, lines]);
+  }), [drawerOpen, lastAdded, lines]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
@@ -86,15 +99,4 @@ export function useCart() {
   const context = useContext(CartContext);
   if (!context) throw new Error("useCart must be used inside CartProvider");
   return context;
-}
-
-export function makeTelegramOrder(lines: CartLine[]) {
-  const items = lines.map((line) => `• ${line.product.title} — ${line.quantity} шт. (арт. ${line.product.article})`);
-  return `https://t.me/Kiss_Love_odsk?text=${encodeURIComponent([
-    "Здравствуйте! Хочу оформить заказ:",
-    "",
-    ...items,
-    "",
-    "Подскажите, пожалуйста, по наличию и доставке.",
-  ].join("\n"))}`;
 }

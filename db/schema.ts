@@ -14,7 +14,7 @@ import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlit
  * project, not here, but this file is the contract it has to honour.
  */
 
-export const styleValues = ["gzhel", "khokhloma", "zhostovo", "other"] as const;
+export const styleValues = ["gzhel", "khokhloma", "author"] as const;
 
 export const workshops = sqliteTable("workshops", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -65,7 +65,7 @@ export const products = sqliteTable(
     slug: text("slug").notNull().unique(), // not in the original field list — bySlug() needs it; seed sets an initial value from sourceTitle, Directus may override
     priceRub: integer("price_rub").notNull(),
     stock: integer("stock").notNull(),
-    style: text("style", { enum: styleValues }).notNull().default("other"),
+    style: text("style", { enum: styleValues }).notNull().default("author"),
     styleConfidence: real("style_confidence"), // 0..1 — the seed LLM's guess certainty
     styleReviewed: integer("style_reviewed", { mode: "boolean" }).notNull().default(false),
     published: integer("published", { mode: "boolean" }).notNull().default(false),

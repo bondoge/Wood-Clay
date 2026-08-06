@@ -151,7 +151,7 @@ export const addresses = pgTable("addresses", {
   city: text("city").notNull(),
   recipientName: text("recipient_name").notNull(),
   street: text("street").notNull(),
-  postalCode: text("postal_code").notNull(),
+  postalCode: text("postal_code"),
   deliveryNote: text("delivery_note"),
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),

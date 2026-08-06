@@ -51,18 +51,19 @@ export async function getDefaultAddress(userId: string) {
 
 export async function upsertDefaultAddress(
   userId: string,
-  data: { city: string; recipientName: string; street: string; postalCode: string; deliveryNote?: string },
+  data: { city: string; recipientName: string; street: string; postalCode?: string; deliveryNote?: string },
 ) {
   const existing = await getDefaultAddress(userId);
+  const values = { ...data, postalCode: data.postalCode ?? null, deliveryNote: data.deliveryNote ?? null };
 
   if (existing) {
-    const [row] = await db.update(addresses).set(data).where(eq(addresses.id, existing.id)).returning();
+    const [row] = await db.update(addresses).set(values).where(eq(addresses.id, existing.id)).returning();
     return row;
   }
 
   const [row] = await db
     .insert(addresses)
-    .values({ ...data, userId, isDefault: true })
+    .values({ ...values, userId, isDefault: true })
     .returning();
   return row;
 }

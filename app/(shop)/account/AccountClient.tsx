@@ -22,7 +22,7 @@ type Address = {
   city: string;
   recipientName: string;
   street: string;
-  postalCode: string;
+  postalCode: string | null;
   deliveryNote: string | null;
 } | null;
 
@@ -386,7 +386,7 @@ export default function AccountClient({ profile, address }: { profile: Profile; 
                   <label><span>Город</span><input name="city" autoComplete="address-level2" placeholder="Москва" defaultValue={address?.city ?? ""} /></label>
                   <label><span>Получатель</span><input name="recipient" autoComplete="name" placeholder="Имя и фамилия" defaultValue={address?.recipientName ?? ""} /></label>
                   <label className="account-form__wide"><span>Улица и дом</span><input name="street" autoComplete="street-address" placeholder="Улица, дом, квартира" defaultValue={address?.street ?? ""} /></label>
-                  <label><span>Индекс</span><input name="postalCode" inputMode="numeric" autoComplete="postal-code" placeholder="000000" defaultValue={address?.postalCode ?? ""} /></label>
+                  <label><span>Индекс <small>необязательно</small></span><input name="postalCode" inputMode="numeric" autoComplete="postal-code" placeholder="000000" defaultValue={address?.postalCode ?? ""} /></label>
                   <label><span>Комментарий курьеру <small>необязательно</small></span><input name="deliveryNote" placeholder="Код домофона, этаж" defaultValue={address?.deliveryNote ?? ""} /></label>
                 </div>
                 <label className="account-check"><input type="checkbox" name="defaultAddress" defaultChecked /><span>Использовать как основной адрес</span></label>

@@ -1,10 +1,10 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, serial, boolean, real, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 
 /**
- * The catalogue lives in a SQLite file OUTSIDE this repo (path via
- * CATALOG_DB_PATH), shared by three systems: a seed project that pulls
- * content and prices from the Wildberries API (not this repo), a Directus
- * admin (not this repo), and this site, which only reads.
+ * The catalogue lives in server-hosted PostgreSQL (Phase 1 — previously a
+ * SQLite file outside this repo), shared by three systems: a seed project
+ * that pulls content and prices from the Wildberries API (not this repo), a
+ * Directus admin (not this repo), and this site, which only reads.
  *
  * Every `products` column below is commented with its ownership group.
  * This is the whole point of the schema: a seed re-run upserts a row by
@@ -16,8 +16,8 @@ import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlit
 
 export const styleValues = ["gzhel", "khokhloma", "author"] as const;
 
-export const workshops = sqliteTable("workshops", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const workshops = pgTable("workshops", {
+  id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   kind: text("kind", { enum: ["own", "partner"] }).notNull(),
@@ -28,8 +28,8 @@ export const workshops = sqliteTable("workshops", {
   photoAlt: text("photo_alt"),
 });
 
-export const masters = sqliteTable("masters", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const masters = pgTable("masters", {
+  id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   workshopId: integer("workshop_id")
@@ -39,12 +39,12 @@ export const masters = sqliteTable("masters", {
   photoAlt: text("photo_alt"),
 });
 
-export const products = sqliteTable(
+export const products = pgTable(
   "products",
   {
     // Stable surrogate key — NOT the WB article, so a product keeps its
     // identity across re-imports even if it's ever re-inserted.
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
 
     // ---------------------------------------------------------------------
     // WB-SYNCED — written once by the seed script from the Wildberries API.
@@ -54,9 +54,9 @@ export const products = sqliteTable(
     wbAccount: integer("wb_account").notNull(), // 1 | 2
     sourceTitle: text("source_title").notNull(),
     sourceDescription: text("source_description").notNull(),
-    sourceImages: text("source_images", { mode: "json" }).$type<string[]>().notNull(),
+    sourceImages: jsonb("source_images").$type<string[]>().notNull(),
     productType: text("product_type").notNull(), // raw WB category, as returned by the API
-    importedAt: integer("imported_at", { mode: "timestamp" }).notNull(),
+    importedAt: timestamp("imported_at", { mode: "date" }).notNull(),
 
     // ---------------------------------------------------------------------
     // MANUALLY-MANAGED — edited in Directus. A seed re-run must NEVER
@@ -67,11 +67,11 @@ export const products = sqliteTable(
     stock: integer("stock").notNull(),
     style: text("style", { enum: styleValues }).notNull().default("author"),
     styleConfidence: real("style_confidence"), // 0..1 — the seed LLM's guess certainty
-    styleReviewed: integer("style_reviewed", { mode: "boolean" }).notNull().default(false),
-    published: integer("published", { mode: "boolean" }).notNull().default(false),
-    isFlagship: integer("is_flagship", { mode: "boolean" }).notNull().default(false),
+    styleReviewed: boolean("style_reviewed").notNull().default(false),
+    published: boolean("published").notNull().default(false),
+    isFlagship: boolean("is_flagship").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
-    ownImages: text("own_images", { mode: "json" }).$type<string[]>(),
+    ownImages: jsonb("own_images").$type<string[]>(),
     ownTitle: text("own_title"),
     ownStory: text("own_story"),
     workshopId: integer("workshop_id").references(() => workshops.id),

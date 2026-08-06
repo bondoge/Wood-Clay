@@ -145,6 +145,8 @@
 .account-order__status { padding: 7px 10px; border-radius: 9px; color: #785c39; background: rgba(169,130,79,.12); font-size: 8px; font-weight: 700; white-space: nowrap; }
 .account-order__items { border-top: 1px solid var(--account-line); }
 .account-order__items > div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--account-line); color: #4a504a; font-size: 11px; }
+.account-order__items > div > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-order__items > div > span:last-child { flex-shrink: 0; }
 .account-order__total { display: flex; justify-content: space-between; padding-top: 12px; font-size: 13px; }
 
 .account-cart-list { border-top: 1px solid var(--account-line); }

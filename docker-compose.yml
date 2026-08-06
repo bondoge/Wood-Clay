@@ -52,3 +52,40 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Catalogue curation admin (Phase 2). Port published on 127.0.0.1 only —
+  # same pattern as "app" and "postgres" above, needed because nginx runs on
+  # the host, not in this compose network, so it reaches this container via
+  # 127.0.0.1:8055, not the internal hostname. Pinned to the same Directus
+  # version as the local dev instance (directus-admin/package.json) so the
+  # custom extensions mounted below are known to be compatible.
+  # See docs/DIRECTUS.md.
+  directus:
+    image: directus/directus:12.1.1
+    container_name: woodandclay-directus
+    restart: unless-stopped
+    environment:
+      KEY: ${DIRECTUS_KEY}
+      SECRET: ${DIRECTUS_SECRET}
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      PUBLIC_URL: http://161.104.44.9/admin/
+      EXTENSIONS_PATH: /directus/extensions
+      # Lets <img> thumbnails pointed at the Selectel bucket (source_images
+      # URLs) render in the Data Studio without being blocked by Directus's
+      # default CSP — matches directus-admin/.env locally.
+      CONTENT_SECURITY_POLICY_DIRECTIVES__IMG_SRC: "array:'self',data:,blob:,https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru"
+    volumes:
+      - /opt/woodclay-directus-extensions:/directus/extensions:ro
+      - /opt/woodclay-directus-uploads:/directus/uploads
+    ports:
+      - "127.0.0.1:8055:8055"
+    depends_on:
+      postgres:
+        condition: service_healthy

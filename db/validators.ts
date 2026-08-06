@@ -11,8 +11,8 @@ export type Workshop = z.infer<typeof workshopSelectSchema>;
 export const masterSelectSchema = createSelectSchema(masters);
 export type Master = z.infer<typeof masterSelectSchema>;
 
-// JSON-mode columns need an explicit shape — drizzle-zod can't infer the
-// array element type of a `text(..., { mode: "json" })` column on its own.
+// jsonb columns need an explicit shape — drizzle-zod can't infer the array
+// element type of a `jsonb(...)` column on its own.
 export const productSelectSchema = createSelectSchema(products, {
   sourceImages: z.array(z.string()),
   ownImages: z.array(z.string()).nullable(),

@@ -1,17 +1,18 @@
-import { migrate } from "drizzle-orm/libsql/migrator";
+import { migrate } from "drizzle-orm/pglite/migrator";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
 import { masters, products, workshops } from "@/db/schema";
 
 // Everything the mock needs is self-contained inside the factory (vitest
 // hoists vi.mock calls above regular imports, so outer-scope variables
-// can't be relied on here) — an in-memory libsql DB standing in for the
-// real catalog.db, wired through the exact same schema.
+// can't be relied on here) — an in-memory pglite (embedded Postgres, WASM)
+// DB standing in for the real catalogue, wired through the exact same
+// schema, so the Postgres-dialect migrations in ./drizzle actually apply.
 vi.mock("@/db/client", async () => {
-  const { createClient } = await import("@libsql/client");
-  const { drizzle } = await import("drizzle-orm/libsql");
+  const { PGlite } = await import("@electric-sql/pglite");
+  const { drizzle } = await import("drizzle-orm/pglite");
   const schema = await import("@/db/schema");
-  const client = createClient({ url: ":memory:" });
+  const client = new PGlite();
   return { db: drizzle(client, { schema }) };
 });
 

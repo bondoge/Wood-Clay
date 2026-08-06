@@ -12,11 +12,11 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # Build-time-only placeholder: catalog pages are force-dynamic (never
 # statically generated), but Next still imports the route module during
-# `next build` to read its config, and libsql's client opens a connection
-# at import time — so the path must exist, even though no query ever runs
-# during the build. This ENV and file do not carry into the runner stage.
-ENV CATALOG_DB_PATH=/tmp/build-placeholder.db
-RUN touch /tmp/build-placeholder.db
+# `next build` to read its config, and db/client.ts throws immediately if
+# DATABASE_URL is unset — so this just needs to be non-empty, not a real,
+# reachable database: pg.Pool connects lazily, so no query ever runs during
+# the build. This ENV does not carry into the runner stage.
+ENV DATABASE_URL=postgres://placeholder:placeholder@localhost:5432/placeholder
 RUN npm run build
 
 # ---- runner: minimal production image ----

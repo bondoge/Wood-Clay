@@ -1,19 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1785233123129,
-      "tag": "0000_sad_klaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1785970637185,
-      "tag": "0001_fat_karma",
+      "version": "7",
+      "when": 1785978118253,
+      "tag": "0000_mature_korath",
       "breakpoints": true
     }
   ]

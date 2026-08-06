@@ -13,13 +13,15 @@
     "shots": "node scripts/shots.mjs",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "generate:reviews-grid": "node --env-file=.env scripts/generate-reviews-grid.mjs"
+    "generate:reviews-grid": "node --env-file=.env scripts/generate-reviews-grid.mjs",
+    "migrate:catalog-to-postgres": "node --env-file=.env scripts/migrate-to-postgres.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "next": "^16.2.11",
+    "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "undici": "^8.10.0",
@@ -27,9 +29,11 @@
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",
+    "@electric-sql/pglite": "^0.3.16",
     "@playwright/test": "^1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",

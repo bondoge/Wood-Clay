@@ -6,12 +6,22 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Phase 3: reads the catalogue from Postgres, not the SQLite file
+      # below (kept mounted for now — SQLite retirement is a later step,
+      # deliberately last, so this stays a working rollback target). Built
+      # inline from the same POSTGRES_* vars postgres/directus already use
+      # — see .env.example's note on the shared-DB-user TODO.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     volumes:
       - /opt/woodclay-data:/data:ro
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
-      - xray
+      xray:
+        condition: service_started
+      postgres:
+        condition: service_healthy
 
   # Local HTTP proxy over the VLESS tunnel, used only for the outbound
   # Telegram API call (see app/api/corporate-quote/route.ts) — Telegram's

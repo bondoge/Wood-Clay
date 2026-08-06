@@ -226,6 +226,17 @@ export const orders = pgTable("orders", {
   shippingCostRub: integer("shipping_cost_rub"), // set in Phase 7
   totalRub: integer("total_rub").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+
+  // Payment (Phase 6). yookassaPaymentId also doubles as a creation claim —
+  // set to a placeholder before the ЮKassa API call, then to the real
+  // payment id on success, so a concurrent/retried request can't create a
+  // second payment for the same order. returnToken is an unguessable id
+  // used only by the customer-return page (see lib/orders.ts) — deliberately
+  // not the order's own sequential id, which a guest has no session to be
+  // checked against.
+  yookassaPaymentId: text("yookassa_payment_id").unique(),
+  paidAt: timestamp("paid_at", { mode: "date" }),
+  returnToken: text("return_token").unique(),
 });
 
 // Snapshotted at order time — title/slug/price are copied, not just a live

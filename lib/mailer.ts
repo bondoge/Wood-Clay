@@ -55,3 +55,13 @@ export async function sendOrderConfirmationEmail(order: {
       `Мы свяжемся с вами, чтобы подтвердить оплату и доставку.`,
   });
 }
+
+export async function sendPaymentReceivedEmail(order: { id: number; contactEmail: string; totalRub: number }) {
+  const { transport, from } = getTransport();
+  await transport.sendMail({
+    from,
+    to: order.contactEmail,
+    subject: `Оплата получена — заказ №${order.id} — Wood&Clay`,
+    text: `Оплата заказа №${order.id} на сумму ${formatPrice(order.totalRub)} получена.\n\nМы начинаем подготовку заказа к отправке.`,
+  });
+}

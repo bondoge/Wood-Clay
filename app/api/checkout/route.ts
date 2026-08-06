@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { createOrder } from "@/lib/orders";
+import { createOrder, createPaymentForOrder } from "@/lib/orders";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 
 const checkoutSchema = z.object({
@@ -51,5 +51,15 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, order: result.order }, { status: 201 });
+  // The order exists (pending_payment, stock already held) regardless of
+  // what happens next — payment creation failing here never loses it. The
+  // client gets returnToken back so it can still send the customer to
+  // /order/status, which offers its own retry into createPaymentForOrder.
+  const origin = new URL(request.url).origin;
+  const payment = await createPaymentForOrder(result.order.id, origin);
+  if (!payment.ok) {
+    return NextResponse.json({ ok: false, error: "payment_failed", returnToken: payment.returnToken }, { status: 502 });
+  }
+
+  return NextResponse.json({ ok: true, confirmationUrl: payment.confirmationUrl }, { status: 201 });
 }

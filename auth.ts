@@ -56,7 +56,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await argon2.verify(user.passwordHash, password).catch(() => false);
         if (!valid) return null;
 
-        return { id: user.id, email: user.email };
+        const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
+        return { id: user.id, email: user.email, name: name || null };
       },
     }),
   ],

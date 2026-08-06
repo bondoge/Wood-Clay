@@ -2,12 +2,17 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import AddToCartButton from "./AddToCartButton";
 import { useCart } from "./CartContext";
 import type { ProductView } from "./product-view";
 import { formatPrice } from "./catalog-utils";
 
 export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "account" }) {
+  const { data: session } = useSession();
+  const displayName = session?.user?.name?.trim();
+  const initial = (displayName?.[0] ?? session?.user?.email?.[0] ?? "").toUpperCase();
+
   return (
     <header className="catalog-nav">
       <Link className="catalog-brand" href="/" aria-label="Wood&Clay — на главную">
@@ -23,7 +28,14 @@ export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "
 
       <div className="catalog-nav__actions">
         <Link className={current === "catalog" ? "is-current" : undefined} href="/catalog">Каталог</Link>
-        <Link className={current === "account" ? "is-current" : undefined} href="/account">Мой кабинет</Link>
+        {session?.user ? (
+          <Link className={`catalog-nav__account${current === "account" ? " is-current" : ""}`} href="/account">
+            <span className="catalog-nav__avatar" aria-hidden="true">{initial}</span>
+            {displayName || "Кабинет"}
+          </Link>
+        ) : (
+          <Link className={current === "account" ? "is-current" : undefined} href="/account/register">Зарегистрироваться</Link>
+        )}
         <MiniCart />
       </div>
     </header>

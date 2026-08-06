@@ -9,10 +9,17 @@ services:
     environment:
       # Phase 3: reads the catalogue from Postgres, not the SQLite file
       # below (kept mounted for now — SQLite retirement is a later step,
-      # deliberately last, so this stays a working rollback target). Built
-      # inline from the same POSTGRES_* vars postgres/directus already use
-      # — see .env.example's note on the shared-DB-user TODO.
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # deliberately last, so this stays a working rollback target). Discrete
+      # fields, not a single DATABASE_URL: an earlier version built one via
+      # ${...} interpolation and broke in production, because
+      # POSTGRES_PASSWORD contains a character that isn't valid unescaped
+      # inside a URL and compose interpolation can't URL-encode it. Same
+      # discrete-field pattern "directus" below already uses.
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - /opt/woodclay-data:/data:ro
     ports:

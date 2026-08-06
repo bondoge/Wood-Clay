@@ -13,10 +13,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Build-time-only placeholder: catalog pages are force-dynamic (never
 # statically generated), but Next still imports the route module during
 # `next build` to read its config, and db/client.ts throws immediately if
-# DATABASE_URL is unset — so this just needs to be non-empty, not a real,
-# reachable database: pg.Pool connects lazily, so no query ever runs during
-# the build. This ENV does not carry into the runner stage.
-ENV DATABASE_URL=postgres://placeholder:placeholder@localhost:5432/placeholder
+# these are unset — so they just need to be non-empty, not real, reachable
+# values: pg.Pool connects lazily, so no query ever runs during the build.
+# These ENVs do not carry into the runner stage.
+ENV PGHOST=placeholder
+ENV PGPORT=5432
+ENV PGDATABASE=placeholder
+ENV PGUSER=placeholder
+ENV PGPASSWORD=placeholder
 RUN npm run build
 
 # ---- runner: minimal production image ----

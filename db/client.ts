@@ -1,21 +1,18 @@
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 
-const dbPath = process.env.CATALOG_DB_PATH;
+const connectionString = process.env.DATABASE_URL;
 
-if (!dbPath) {
+if (!connectionString) {
   throw new Error(
-    "CATALOG_DB_PATH is not set. This must point at the shared catalog.db " +
-      "file (outside this repo) used by the seed project and Directus. " +
+    "DATABASE_URL is not set. This must point at the shared Postgres " +
+      "catalogue database also used by the seed project and Directus. " +
       "See .env.example.",
   );
 }
 
-// libsql's local-file mode ("file:" URL, no libsql:// host) opens a standard
-// SQLite file on disk — same on-disk format as any other SQLite driver, so
-// the seed project and Directus (which use their own SQLite drivers) read
-// and write the same file unchanged.
-const client = createClient({ url: `file:${dbPath}` });
+// Pool connects lazily — no connection is opened until the first query runs.
+const pool = new Pool({ connectionString });
 
-export const db = drizzle(client, { schema });
+export const db = drizzle(pool, { schema });

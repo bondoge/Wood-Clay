@@ -13,7 +13,8 @@
     "shots": "node scripts/shots.mjs",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "generate:reviews-grid": "node --env-file=.env scripts/generate-reviews-grid.mjs"
+    "generate:reviews-grid": "node --env-file=.env scripts/generate-reviews-grid.mjs",
+    "migrate:catalog-to-postgres": "node --env-file=.env scripts/migrate-to-postgres.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
@@ -30,11 +31,13 @@
     "@playwright/test": "^1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
+    "pg": "^8.22.0",
     "prettier": "^3",
     "prettier-plugin-tailwindcss": "^0.6",
     "sharp": "^0.35.3",

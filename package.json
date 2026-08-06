@@ -17,7 +17,6 @@
     "migrate:catalog-to-postgres": "node --env-file=.env scripts/migrate-to-postgres.mjs"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.4",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "next": "^16.2.11",

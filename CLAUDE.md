@@ -26,7 +26,7 @@ The failure mode we are avoiding is *сувенирная лавка* — souven
 ## Stack
 
 - Next.js (App Router, ≥16.2.11) · TypeScript strict · Tailwind
-- **Catalogue: SQLite (`data/catalog.db`), outside this repo**, shared with a separate seed project (Wildberries API → DB, own repo) and a Directus admin (own app). This site only reads it. Schema is owned here (`db/schema.ts`, Drizzle ORM) — the seed project and Directus conform to it, not the other way round. No CMS in this repo. See **Catalogue architecture** below.
+- **Catalogue: Postgres**, on the same Russian-datacentre server as the app (`docker-compose.yml`'s `postgres` service), shared with a separate seed project (Wildberries API → DB, own repo) and a Directus admin (own app, also on the server — see `docs/DIRECTUS.md`). This site only reads it. Schema is owned here (`db/schema.ts`, Drizzle ORM) — the seed project and Directus conform to it, not the other way round. No CMS in this repo. See **Catalogue architecture** below.
 - **Hosting: Russian datacentre** (Selectel / Timeweb Cloud / Yandex Cloud). Never Vercel — 152-ФЗ requires personal data to be stored on servers in Russia.
 - Payments: **ЮKassa**, including **СБП/QR**. 54-ФЗ fiscalisation via cloud kassa.
 - Analytics: **Яндекс.Метрика**. Never Google Analytics.
@@ -55,7 +55,7 @@ components/ornament/       SVG ornament + motion components
 components/site/           header, footer, nav
 db/
   schema.ts                Drizzle tables (products, workshops, masters) — single source of truth
-  client.ts                connection; requires CATALOG_DB_PATH, no fallback
+  client.ts                connection; requires PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD, no fallback
   validators.ts            zod mirror of schema.ts, via drizzle-zod
 drizzle/                   generated migration SQL — the DDL contract the seed project/Directus conform to
 lib/catalog.ts             the read layer — listPublished, byStyle, flagships, bySlug. Pages import this, never raw SQL, never db/schema.ts directly.
@@ -67,7 +67,7 @@ MOTION-SPEC.md             the complete motion inventory — read before any ani
 
 ## Catalogue architecture
 
-~1000 products live in `data/catalog.db`, a SQLite file **outside this repo** (path via the required `CATALOG_DB_PATH` env var — see `.env.example`). Three systems share it:
+~2200 products live in Postgres, on the server (path via the required `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD` env vars — see `.env.example`; discrete fields rather than a single connection-string URL, since a password containing a URL-special character once broke a naive `${...}`-interpolated `DATABASE_URL` in `docker-compose.yml`). Three systems share it:
 - A **seed project** (separate repo) pulls content and prices from the Wildberries API and upserts rows, matched on `(wb_account, wb_article)`.
 - **Directus** (separate app) is where products get curated: style corrected, price/stock kept current, `published`/`is_flagship` set, rich `own_title`/`own_story`/`own_images` written.
 - **This site reads only**, through `lib/catalog.ts`. Never raw SQL in a page, never a query that can return an unpublished row.

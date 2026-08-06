@@ -14,6 +14,11 @@
 // field exactly — no transformation, no re-applied defaults. Safe to run
 // only once: aborts if the target `products` table already has rows.
 //
+// Already run — the live site has read Postgres since Phase 3. Kept as a
+// historical record, not a maintained tool: @libsql/client was removed from
+// package.json once SQLite was retired, so this needs `npm i @libsql/client`
+// before it would run again.
+//
 //   node --env-file=.env scripts/migrate-to-postgres.mjs
 import { createClient } from "@libsql/client";
 import pg from "pg";

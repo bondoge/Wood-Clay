@@ -2,9 +2,29 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { CatalogFooter, CatalogHeader } from "../catalog/catalog-components";
 import { useCart } from "../catalog/CartContext";
 import { formatPrice } from "../catalog/catalog-utils";
+
+type Profile = {
+  id: string;
+  email: string;
+  emailVerified: Date | null;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  phoneVerifiedAt: Date | null;
+};
+
+type Address = {
+  city: string;
+  recipientName: string;
+  street: string;
+  postalCode: string;
+  deliveryNote: string | null;
+} | null;
 
 type AccountSection = "overview" | "orders" | "cart" | "profile" | "addresses" | "payment";
 
@@ -17,19 +37,26 @@ const navigation: { id: AccountSection; label: string; icon: string }[] = [
   { id: "payment", label: "Способы оплаты", icon: "—" },
 ];
 
-export default function AccountClient() {
+export default function AccountClient({ profile, address }: { profile: Profile; address: Address }) {
+  const router = useRouter();
   const cart = useCart();
   const [activeSection, setActiveSection] = useState<AccountSection>("overview");
   const [savedMessage, setSavedMessage] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [verificationTarget, setVerificationTarget] = useState<"phone" | "email" | null>(null);
+  const [phone, setPhone] = useState(profile.phone ?? "");
+  const [emailVerificationOpen, setEmailVerificationOpen] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState("");
-  const [verifiedContacts, setVerifiedContacts] = useState({ phone: false, email: false });
+  const [verifiedContacts, setVerifiedContacts] = useState({
+    phone: Boolean(profile.phoneVerifiedAt),
+    email: Boolean(profile.emailVerified),
+  });
   const [resendSeconds, setResendSeconds] = useState(0);
 
   const cartPreview = useMemo(() => cart.lines.slice(0, 3), [cart.lines]);
+  const profileCompletionPercent = useMemo(() => {
+    const fields = [profile.firstName, profile.lastName, phone, address?.city];
+    return Math.round((fields.filter(Boolean).length / fields.length) * 100);
+  }, [profile.firstName, profile.lastName, phone, address]);
 
   useEffect(() => {
     if (resendSeconds <= 0) return;
@@ -45,38 +72,104 @@ export default function AccountClient() {
     });
   };
 
-  const saveForm = (event: FormEvent<HTMLFormElement>, message: string) => {
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    router.push("/");
+    router.refresh();
+  };
+
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSavedMessage(message);
+    const form = new FormData(event.currentTarget);
+    const firstName = String(form.get("firstName") ?? "").trim();
+    const lastName = String(form.get("lastName") ?? "").trim();
+    setSavedMessage("");
+
+    const response = await fetch("/api/account/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        phone: phone.trim() || undefined,
+      }),
+    }).catch(() => null);
+
+    setSavedMessage(response?.ok ? "Личные данные сохранены" : "Не удалось сохранить изменения. Попробуйте ещё раз.");
+  };
+
+  const saveAddress = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSavedMessage("");
+
+    const response = await fetch("/api/account/addresses", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        city: String(form.get("city") ?? "").trim(),
+        recipientName: String(form.get("recipient") ?? "").trim(),
+        street: String(form.get("street") ?? "").trim(),
+        postalCode: String(form.get("postalCode") ?? "").trim(),
+        deliveryNote: String(form.get("deliveryNote") ?? "").trim() || undefined,
+      }),
+    }).catch(() => null);
+
+    setSavedMessage(response?.ok ? "Адрес сохранён" : "Не удалось сохранить адрес. Попробуйте ещё раз.");
+  };
+
+  const savePaymentPreference = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavedMessage("Предпочтение сохранено");
+  };
+
+  const requestEmailCode = async () => {
+    const response = await fetch("/api/account/verify/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: "email" }),
+    }).catch(() => null);
+    if (!response?.ok) {
+      setVerificationError("Не удалось отправить код. Попробуйте ещё раз.");
+      setEmailVerificationOpen(false);
+    }
   };
 
   const startVerification = (target: "phone" | "email") => {
-    const isPhoneValid = phone.replace(/\D/g, "").length >= 10;
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if ((target === "phone" && !isPhoneValid) || (target === "email" && !isEmailValid)) {
-      setVerificationError(target === "phone" ? "Проверьте номер телефона" : "Проверьте адрес электронной почты");
+    setVerificationError("");
+    if (target === "phone") {
+      setVerificationError("SMS-подтверждение телефона временно недоступно — мы сообщим, когда оно заработает.");
       return;
     }
-    setVerificationTarget(target);
+    setEmailVerificationOpen(true);
     setVerificationCode("");
-    setVerificationError("");
     setResendSeconds(30);
+    void requestEmailCode();
   };
 
-  const confirmVerification = () => {
-    if (!verificationTarget) return;
+  const confirmVerification = async () => {
     if (!/^\d{6}$/.test(verificationCode)) {
       setVerificationError("Введите шестизначный код");
       return;
     }
-    setVerifiedContacts((current) => ({ ...current, [verificationTarget]: true }));
-    setSavedMessage(verificationTarget === "phone" ? "Телефон подтверждён" : "Email подтверждён");
-    setVerificationTarget(null);
+
+    const response = await fetch("/api/account/verify/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: "email", code: verificationCode }),
+    }).catch(() => null);
+
+    if (!response?.ok) {
+      setVerificationError("Неверный код. Проверьте письмо и попробуйте снова.");
+      return;
+    }
+
+    setVerifiedContacts((current) => ({ ...current, email: true }));
+    setSavedMessage("Email подтверждён");
+    setEmailVerificationOpen(false);
     setVerificationCode("");
     setVerificationError("");
   };
-
-  const maskedContact = verificationTarget === "phone" ? maskPhone(phone) : maskEmail(email);
 
   return (
     <main className="catalog-page account-page">
@@ -99,8 +192,11 @@ export default function AccountClient() {
       <section className="account-shell" aria-label="Разделы личного кабинета">
         <aside className="account-sidebar">
           <div className="account-sidebar__identity">
-            <span aria-hidden="true">W</span>
-            <div><strong>Ваш профиль</strong><small>Wood&amp;Clay</small></div>
+            <span aria-hidden="true">{(profile.firstName?.[0] ?? profile.email[0]).toUpperCase()}</span>
+            <div>
+              <strong>{[profile.firstName, profile.lastName].filter(Boolean).join(" ") || "Ваш профиль"}</strong>
+              <small>{profile.email}</small>
+            </div>
           </div>
           <nav aria-label="Личный кабинет">
             {navigation.map((item) => (
@@ -115,6 +211,10 @@ export default function AccountClient() {
                 {item.id === "cart" && cart.itemCount > 0 && <b>{cart.itemCount}</b>}
               </button>
             ))}
+            <button type="button" onClick={() => void handleSignOut()}>
+              <span aria-hidden="true">↩</span>
+              Выйти
+            </button>
           </nav>
           <a className="account-sidebar__help" href="mailto:woodandclay.help@mail.ru">
             <span>Нужна помощь?</span>
@@ -139,7 +239,7 @@ export default function AccountClient() {
                   <span>В корзине</span><strong>{cart.itemCount}</strong><small>{cart.itemCount ? formatPrice(cart.total) : "Корзина пуста"}</small><i aria-hidden="true">→</i>
                 </button>
                 <button type="button" onClick={() => selectSection("addresses")}>
-                  <span>Адрес доставки</span><strong className="account-stat-grid__text">Не указан</strong><small>Добавьте для быстрого заказа</small><i aria-hidden="true">→</i>
+                  <span>Адрес доставки</span><strong className="account-stat-grid__text">{address ? address.city : "Не указан"}</strong><small>{address ? "Изменить адрес" : "Добавьте для быстрого заказа"}</small><i aria-hidden="true">→</i>
                 </button>
               </div>
 
@@ -169,7 +269,7 @@ export default function AccountClient() {
                   <p>Сделайте оформление быстрее</p>
                   <h3>Заполните профиль один раз</h3>
                   <p>Имя, телефон и адрес будут доступны при оформлении следующих заказов.</p>
-                  <div className="account-progress" aria-label="Профиль не заполнен"><span style={{ width: "18%" }} /></div>
+                  <div className="account-progress" aria-label={`Профиль заполнен на ${profileCompletionPercent}%`}><span style={{ width: `${profileCompletionPercent}%` }} /></div>
                   <button type="button" onClick={() => selectSection("profile")}>Заполнить данные <span aria-hidden="true">→</span></button>
                 </article>
               </div>
@@ -221,31 +321,31 @@ export default function AccountClient() {
           {activeSection === "profile" && (
             <section className="account-panel" aria-labelledby="account-profile-title">
               <header className="account-panel__heading"><div><p className="catalog-eyebrow">Личные данные</p><h2 id="account-profile-title">Профиль</h2></div><p>Используем эти данные только для заказов и связи с вами.</p></header>
-              <form className="account-form" data-account-form="profile" onSubmit={(event) => saveForm(event, "Личные данные сохранены") }>
+              <form className="account-form" data-account-form="profile" onSubmit={saveProfile}>
                 <div className="account-form__grid">
-                  <label><span>Имя</span><input name="firstName" autoComplete="given-name" placeholder="Ваше имя" /></label>
-                  <label><span>Фамилия</span><input name="lastName" autoComplete="family-name" placeholder="Ваша фамилия" /></label>
+                  <label><span>Имя</span><input name="firstName" autoComplete="given-name" placeholder="Ваше имя" defaultValue={profile.firstName ?? ""} /></label>
+                  <label><span>Фамилия</span><input name="lastName" autoComplete="family-name" placeholder="Ваша фамилия" defaultValue={profile.lastName ?? ""} /></label>
                   <div className="account-contact-field">
                     <label htmlFor="account-phone">Телефон <small className={verifiedContacts.phone ? "is-verified" : ""}>{verifiedContacts.phone ? "✓ подтверждён" : "не подтверждён"}</small></label>
                     <span className="account-contact-field__control">
                       <input id="account-phone" type="tel" name="phone" autoComplete="tel" placeholder="+7 900 000-00-00" value={phone} onChange={(event) => { setPhone(event.target.value); setVerifiedContacts((current) => ({ ...current, phone: false })); }} />
-                      <button type="button" data-verification-channel="phone" onClick={() => startVerification("phone")}>{verifiedContacts.phone ? "Изменить" : "Подтвердить"}</button>
+                      <button type="button" data-verification-channel="phone" onClick={() => startVerification("phone")}>Подтвердить</button>
                     </span>
                   </div>
                   <div className="account-contact-field">
                     <label htmlFor="account-email">Email <small className={verifiedContacts.email ? "is-verified" : ""}>{verifiedContacts.email ? "✓ подтверждён" : "не подтверждён"}</small></label>
                     <span className="account-contact-field__control">
-                      <input id="account-email" type="email" name="email" autoComplete="email" placeholder="name@example.com" value={email} onChange={(event) => { setEmail(event.target.value); setVerifiedContacts((current) => ({ ...current, email: false })); }} />
-                      <button type="button" data-verification-channel="email" onClick={() => startVerification("email")}>{verifiedContacts.email ? "Изменить" : "Подтвердить"}</button>
+                      <input id="account-email" type="email" name="email" autoComplete="email" value={profile.email} readOnly disabled />
+                      <button type="button" data-verification-channel="email" disabled={verifiedContacts.email} onClick={() => startVerification("email")}>{verifiedContacts.email ? "Подтверждён" : "Подтвердить"}</button>
                     </span>
                   </div>
-                  {verificationTarget && (
+                  {emailVerificationOpen && (
                     <div className="account-verification" role="dialog" aria-modal="false" aria-labelledby="account-verification-title">
-                      <span className="account-verification__mark" aria-hidden="true">{verificationTarget === "phone" ? "SMS" : "@"}</span>
+                      <span className="account-verification__mark" aria-hidden="true">@</span>
                       <div>
-                        <small>{verificationTarget === "phone" ? "Подтверждение телефона" : "Подтверждение email"}</small>
+                        <small>Подтверждение email</small>
                         <h3 id="account-verification-title">Введите код</h3>
-                        <p>Шестизначный код отправлен на {maskedContact}.</p>
+                        <p>Шестизначный код отправлен на {maskEmail(profile.email)}.</p>
                       </div>
                       <div className="account-verification__code">
                         <input
@@ -259,11 +359,11 @@ export default function AccountClient() {
                           onChange={(event) => { setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6)); setVerificationError(""); }}
                           aria-label="Шестизначный код подтверждения"
                         />
-                        <button type="button" onClick={confirmVerification}>Подтвердить</button>
+                        <button type="button" onClick={() => void confirmVerification()}>Подтвердить</button>
                       </div>
                       <div className="account-verification__footer">
-                        <button type="button" onClick={() => setVerificationTarget(null)}>Отмена</button>
-                        <button type="button" disabled={resendSeconds > 0} onClick={() => setResendSeconds(30)}>
+                        <button type="button" onClick={() => setEmailVerificationOpen(false)}>Отмена</button>
+                        <button type="button" disabled={resendSeconds > 0} onClick={() => { setResendSeconds(30); void requestEmailCode(); }}>
                           {resendSeconds > 0 ? `Новый код через 00:${String(resendSeconds).padStart(2, "0")}` : "Получить новый код"}
                         </button>
                       </div>
@@ -280,14 +380,14 @@ export default function AccountClient() {
           {activeSection === "addresses" && (
             <section className="account-panel" aria-labelledby="account-address-title">
               <header className="account-panel__heading"><div><p className="catalog-eyebrow">Доставка</p><h2 id="account-address-title">Адреса</h2></div><p>Основной адрес будет выбран при оформлении заказа.</p></header>
-              <form className="account-form" data-account-form="address" onSubmit={(event) => saveForm(event, "Адрес сохранён") }>
+              <form className="account-form" data-account-form="address" onSubmit={saveAddress}>
                 <div className="account-address-label"><span>Основной адрес</span><small>СДЭК</small></div>
                 <div className="account-form__grid">
-                  <label><span>Город</span><input name="city" autoComplete="address-level2" placeholder="Москва" /></label>
-                  <label><span>Получатель</span><input name="recipient" autoComplete="name" placeholder="Имя и фамилия" /></label>
-                  <label className="account-form__wide"><span>Улица и дом</span><input name="street" autoComplete="street-address" placeholder="Улица, дом, квартира" /></label>
-                  <label><span>Индекс</span><input name="postalCode" inputMode="numeric" autoComplete="postal-code" placeholder="000000" /></label>
-                  <label><span>Комментарий курьеру <small>необязательно</small></span><input name="deliveryNote" placeholder="Код домофона, этаж" /></label>
+                  <label><span>Город</span><input name="city" autoComplete="address-level2" placeholder="Москва" defaultValue={address?.city ?? ""} /></label>
+                  <label><span>Получатель</span><input name="recipient" autoComplete="name" placeholder="Имя и фамилия" defaultValue={address?.recipientName ?? ""} /></label>
+                  <label className="account-form__wide"><span>Улица и дом</span><input name="street" autoComplete="street-address" placeholder="Улица, дом, квартира" defaultValue={address?.street ?? ""} /></label>
+                  <label><span>Индекс</span><input name="postalCode" inputMode="numeric" autoComplete="postal-code" placeholder="000000" defaultValue={address?.postalCode ?? ""} /></label>
+                  <label><span>Комментарий курьеру <small>необязательно</small></span><input name="deliveryNote" placeholder="Код домофона, этаж" defaultValue={address?.deliveryNote ?? ""} /></label>
                 </div>
                 <label className="account-check"><input type="checkbox" name="defaultAddress" defaultChecked /><span>Использовать как основной адрес</span></label>
                 <div className="account-form__footer"><p>{savedMessage || "Адрес можно изменить перед каждой покупкой."}</p><button type="submit">Сохранить адрес</button></div>
@@ -298,7 +398,7 @@ export default function AccountClient() {
           {activeSection === "payment" && (
             <section className="account-panel" aria-labelledby="account-payment-title">
               <header className="account-panel__heading"><div><p className="catalog-eyebrow">Оплата</p><h2 id="account-payment-title">Способ оплаты</h2></div><p>Выберите привычный способ для быстрого оформления.</p></header>
-              <form className="account-payment-form" data-account-form="payment" onSubmit={(event) => saveForm(event, "Предпочтение сохранено") }>
+              <form className="account-payment-form" data-account-form="payment" onSubmit={savePaymentPreference}>
                 <div className="account-payment-options">
                   <label><input type="radio" name="paymentMethod" value="card" defaultChecked /><span className="account-payment-mark">Ю</span><span><strong>Банковская карта</strong><small>Оплата на защищённой странице ЮKassa</small></span><em>Основной</em></label>
                   <label><input type="radio" name="paymentMethod" value="sbp" /><span className="account-payment-mark account-payment-mark--sbp">СБП</span><span><strong>Система быстрых платежей</strong><small>По QR-коду или через приложение банка</small></span><em>Выбрать</em></label>
@@ -328,12 +428,6 @@ function pluralize(count: number) {
   if (mod10 === 1) return "изделие";
   if (mod10 >= 2 && mod10 <= 4) return "изделия";
   return "изделий";
-}
-
-function maskPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length < 4) return value;
-  return `+${digits.slice(0, 1)} ••• •••-${digits.slice(-4, -2)}-${digits.slice(-2)}`;
 }
 
 function maskEmail(value: string) {

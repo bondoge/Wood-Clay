@@ -12,7 +12,7 @@ vi.mock("@/db/client", async () => {
   return { db: drizzle(client, { schema }) };
 });
 
-const sendVerificationEmail = vi.fn(async (_to: string, _code: string) => {});
+const sendVerificationEmail = vi.fn<(to: string, code: string) => Promise<void>>();
 vi.mock("@/lib/mailer", () => ({
   sendVerificationEmail: (to: string, code: string) => sendVerificationEmail(to, code),
 }));

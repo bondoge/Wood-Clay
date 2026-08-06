@@ -153,6 +153,11 @@
 .account-cart-actions a:first-child { color: #666d66; font-size: 10px; }
 .account-cart-actions a:last-child { min-width: 200px; height: 50px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-radius: 14px; color: #f5f2ec; background: var(--account-green); font-size: 10px; }
 
+.account-auth { width: min(560px, calc(100% - 64px)); margin: 100px auto 130px; }
+.account-auth__intro { margin-bottom: 30px; text-align: center; }
+.account-auth__intro h1 { margin: 10px 0 12px; font-size: clamp(38px, 6vw, 52px); font-weight: 480; letter-spacing: -.05em; line-height: .95; }
+.account-auth__intro p { max-width: 420px; margin: 0 auto; color: #7b817a; font-size: 12px; line-height: 1.6; }
+
 .account-form, .account-payment-form { padding: clamp(22px,4vw,38px); border: 1px solid var(--account-line); border-radius: 23px; background: rgba(255,255,255,.54); }
 .account-form__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .account-form label { min-width: 0; display: grid; gap: 8px; }
@@ -253,6 +258,7 @@
   .account-payment-options label { grid-template-columns: auto auto minmax(0,1fr); }
   .account-payment-options em { grid-column: 3; }
   .account-privacy-note { width: calc(100% - 36px); margin: -28px auto 78px; align-items: start; flex-direction: column; }
+  .account-auth { width: calc(100% - 36px); margin: 60px auto 90px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

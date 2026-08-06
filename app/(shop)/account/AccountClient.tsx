@@ -3,7 +3,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { CatalogFooter, CatalogHeader } from "../catalog/catalog-components";
 import { useCart } from "../catalog/CartContext";
 import { formatPrice } from "../catalog/catalog-utils";
@@ -39,6 +39,7 @@ const navigation: { id: AccountSection; label: string; icon: string }[] = [
 
 export default function AccountClient({ profile, address }: { profile: Profile; address: Address }) {
   const router = useRouter();
+  const { update: updateSession } = useSession();
   const cart = useCart();
   const [activeSection, setActiveSection] = useState<AccountSection>("overview");
   const [savedMessage, setSavedMessage] = useState("");
@@ -95,6 +96,11 @@ export default function AccountClient({ profile, address }: { profile: Profile; 
       }),
     }).catch(() => null);
 
+    if (response?.ok) {
+      // Refreshes the JWT so the header's name updates immediately instead
+      // of only after the next login.
+      await updateSession({ name: [firstName, lastName].filter(Boolean).join(" ") || null });
+    }
     setSavedMessage(response?.ok ? "Личные данные сохранены" : "Не удалось сохранить изменения. Попробуйте ещё раз.");
   };
 

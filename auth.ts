@@ -62,8 +62,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt: ({ token, user }) => {
+    jwt: ({ token, user, trigger, session }) => {
       if (user) token.sub = user.id;
+      // Triggered by useSession().update() (see AccountClient's profile
+      // save) — lets the header pick up a name change without a re-login,
+      // which a plain JWT session otherwise can't do.
+      if (trigger === "update" && session && typeof session === "object" && "name" in session) {
+        const name = (session as { name?: unknown }).name;
+        if (typeof name === "string" || name === null) token.name = name;
+      }
       return token;
     },
     session: ({ session, token }) => {

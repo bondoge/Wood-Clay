@@ -42,6 +42,22 @@ either way.
   least-privilege role of its own. Acceptable for now (small project, sole
   operator, no customer data yet); split it into its own role with
   narrower grants later, before this stops being a single-operator setup.
+- **Phase 4 (accounts): `COOKIE_SECURE` must flip to `true` the moment HTTPS
+  lands**, alongside the admin-login switch above — it's `false` right now
+  because a `Secure`-flagged cookie is silently dropped by the browser over
+  plain HTTP, which would break login entirely. See `.env.example`'s
+  `AUTH_SECRET`/`COOKIE_SECURE` block. **No real customer registers on this
+  site until HTTPS + `COOKIE_SECURE=true` are both on** — until then, every
+  password created here is throwaway, same as `ADMIN_PASSWORD` above.
+  `AUTH_SECRET` itself doesn't need rotating at that point, just a look
+  alongside the other HTTP→HTTPS flags.
+- **The `woodclay_app` Postgres password was accidentally printed into a
+  local terminal session during Phase 4** (a redaction bug that missed
+  `DATABASE_URL` embedding it, distinct from `POSTGRES_PASSWORD` itself).
+  Treat it as compromised — rotate it (`ALTER ROLE`, then update the
+  server's `.env` and your own local `.env`/`DATABASE_URL`) whenever
+  convenient. Not urgent — the tunnel is localhost-only and the server is
+  SSH-key-gated — but shouldn't sit indefinitely.
 
 ## Extensions
 

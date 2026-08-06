@@ -12,6 +12,25 @@ Local dev instance lives outside this repo at
 `directus@12.1.1`, run against the shared SQLite file). The server runs the
 same Directus version via the official Docker image, against Postgres.
 
+## Why it's on its own port, not a URL path
+
+The admin is reachable at `http://161.104.44.9:8080/` — a second nginx
+`server` block listening on `:8080`, proxying 1:1 to the `directus` container
+on `127.0.0.1:8055`, no path rewriting. Not `/admin/` on the main site's
+port 80.
+
+That was the first attempt, and it doesn't work: Directus's admin SPA isn't
+built to be served from a URL sub-path. Its static assets are served at a
+fixed `/assets/...`, unaffected by `PUBLIC_URL`, while its client-side routes
+(e.g. the first-run `/setup` redirect) are matched *against* `PUBLIC_URL`'s
+path. Stripping the `/admin` prefix in nginx (so assets resolve) breaks route
+matching (`/setup` 404s); preserving it (so routes resolve) breaks asset
+requests (a `.js` file request falls through to the SPA-fallback and comes
+back as `text/html`, which the browser then refuses to execute as a module
+script). No rewrite reconciles both — the fix is to give it its own origin
+instead, where `PUBLIC_URL` has no path component and nothing needs stripping
+either way.
+
 ## Security TODOs — do not lose track of these
 
 - **Admin login is plain HTTP for now.** `ADMIN_PASSWORD` in the server
@@ -51,7 +70,7 @@ default curation-queue view (`style_reviewed = false`, sorted by
 instance by overriding its `.env` lookups for that one run:
 
 ```bash
-PUBLIC_URL=http://161.104.44.9/admin/ \
+PUBLIC_URL=http://161.104.44.9:8080/ \
 ADMIN_EMAIL=<server admin email> \
 ADMIN_PASSWORD=<server admin password> \
 node scripts/configure.mjs

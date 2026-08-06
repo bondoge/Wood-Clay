@@ -8,6 +8,13 @@
       "when": 1785978118253,
       "tag": "0000_mature_korath",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785996634245,
+      "tag": "0001_careful_master_chief",
+      "breakpoints": true
     }
   ]
 }

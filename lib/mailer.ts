@@ -1,32 +1,57 @@
 import nodemailer from "nodemailer";
+import { formatPrice } from "@/app/(shop)/catalog/catalog-utils";
 
 // Env checked at call time, not module load — mirrors sendTelegramNotification
 // in app/api/corporate-quote/route.ts, not db/client.ts's eager boot-time
 // throw. Not every request needs SMTP configured.
-export async function sendVerificationEmail(to: string, code: string) {
+//
+// From must equal the authenticated user — mail.ru rejects a mismatched
+// From address, so there's no separate EMAIL_FROM to configure.
+function getTransport() {
   const host = process.env.SMTP_HOST;
   const port = process.env.SMTP_PORT;
   const user = process.env.SMTP_USER;
   const password = process.env.SMTP_PASSWORD;
   if (!host || !port || !user || !password) {
-    throw new Error(
-      "SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD is not set — cannot send the verification email.",
-    );
+    throw new Error("SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD is not set — cannot send email.");
   }
 
-  // From must equal the authenticated user — mail.ru rejects a mismatched
-  // From address, so there's no separate EMAIL_FROM to configure.
   const transport = nodemailer.createTransport({
     host,
     port: Number(port),
     secure: true,
     auth: { user, pass: password },
   });
+  return { transport, from: user };
+}
 
+export async function sendVerificationEmail(to: string, code: string) {
+  const { transport, from } = getTransport();
   await transport.sendMail({
-    from: user,
+    from,
     to,
     subject: "Код подтверждения — Wood&Clay",
     text: `Ваш код подтверждения: ${code}\n\nКод действителен 10 минут. Если вы не запрашивали код, просто проигнорируйте это письмо.`,
+  });
+}
+
+export async function sendOrderConfirmationEmail(order: {
+  id: number;
+  contactEmail: string;
+  totalRub: number;
+  items: { title: string; priceRub: number; quantity: number }[];
+}) {
+  const { transport, from } = getTransport();
+  const lines = order.items
+    .map((item) => `${item.title} × ${item.quantity} — ${formatPrice(item.priceRub * item.quantity)}`)
+    .join("\n");
+
+  await transport.sendMail({
+    from,
+    to: order.contactEmail,
+    subject: `Заказ №${order.id} — Wood&Clay`,
+    text:
+      `Спасибо за заказ!\n\n${lines}\n\nИтого: ${formatPrice(order.totalRub)}\n\n` +
+      `Мы свяжемся с вами, чтобы подтвердить оплату и доставку.`,
   });
 }

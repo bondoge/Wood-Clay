@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { linkOrderToUser } from "@/lib/orders";
 
 const registerSchema = z.object({
   email: z.email().trim().toLowerCase(),
@@ -13,6 +14,10 @@ const registerSchema = z.object({
   lastName: z.string().trim().min(1).optional(),
   phone: z.string().trim().min(1).optional(),
   consent: z.literal(true),
+  // Set only by the post-purchase account offer, right after a guest
+  // checkout — never taken from a URL. linkOrderToUser itself re-checks the
+  // email match and that the order is still unowned before touching it.
+  linkOrderId: z.number().int().positive().optional(),
 });
 
 const isRateLimited = createRateLimiter(60 * 60 * 1000, 10);
@@ -28,7 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "invalid_input" }, { status: 400 });
   }
 
-  const { email, password, firstName, lastName, phone } = parsed.data;
+  const { email, password, firstName, lastName, phone, linkOrderId } = parsed.data;
 
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
   if (existing) {
@@ -36,15 +41,20 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = await argon2.hash(password);
+  let userId: string;
 
   try {
-    await db.insert(users).values({
-      email,
-      passwordHash,
-      firstName: firstName ?? null,
-      lastName: lastName ?? null,
-      phone: phone ?? null,
-    });
+    const [created] = await db
+      .insert(users)
+      .values({
+        email,
+        passwordHash,
+        firstName: firstName ?? null,
+        lastName: lastName ?? null,
+        phone: phone ?? null,
+      })
+      .returning({ id: users.id });
+    userId = created.id;
   } catch (err) {
     // Unique-violation race: two concurrent registrations for the same
     // email both pass the SELECT check above before either INSERTs.
@@ -53,6 +63,8 @@ export async function POST(request: Request) {
     }
     throw err;
   }
+
+  if (linkOrderId) await linkOrderToUser(linkOrderId, userId, email);
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

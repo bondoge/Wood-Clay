@@ -26,3 +26,11 @@ const pool = new Pool({
 });
 
 export const db = drizzle(pool, { schema });
+
+// The `tx` a db.transaction() callback receives — extracted from the
+// callback's own signature so it can never drift from whatever drizzle
+// actually passes. Functions that need to optionally run inside someone
+// else's transaction (decrementStock, cart's clearCart) accept
+// `Database | Transaction` instead of hardcoding `typeof db`.
+export type Database = typeof db;
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];

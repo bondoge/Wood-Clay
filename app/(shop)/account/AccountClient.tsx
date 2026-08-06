@@ -26,6 +26,22 @@ type Address = {
   deliveryNote: string | null;
 } | null;
 
+type OrderItem = { productId: number | null; title: string; slug: string; priceRub: number; quantity: number };
+type Order = {
+  id: number;
+  status: string;
+  totalRub: number;
+  createdAt: Date;
+  items: OrderItem[];
+};
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  pending_payment: "Ожидает оплаты",
+  paid: "Оплачен",
+  cancelled: "Отменён",
+  fulfilled: "Выполнен",
+};
+
 type AccountSection = "overview" | "orders" | "cart" | "profile" | "addresses" | "payment";
 
 const navigation: { id: AccountSection; label: string; icon: string }[] = [
@@ -37,7 +53,15 @@ const navigation: { id: AccountSection; label: string; icon: string }[] = [
   { id: "payment", label: "Способы оплаты", icon: "—" },
 ];
 
-export default function AccountClient({ profile, address }: { profile: Profile; address: Address }) {
+export default function AccountClient({
+  profile,
+  address,
+  orders,
+}: {
+  profile: Profile;
+  address: Address;
+  orders: Order[];
+}) {
   const router = useRouter();
   const { update: updateSession } = useSession();
   const cart = useCart();
@@ -239,7 +263,7 @@ export default function AccountClient({ profile, address }: { profile: Profile; 
 
               <div className="account-stat-grid">
                 <button type="button" onClick={() => selectSection("orders")}>
-                  <span>Заказы</span><strong>0</strong><small>История покупок</small><i aria-hidden="true">→</i>
+                  <span>Заказы</span><strong>{orders.length}</strong><small>История покупок</small><i aria-hidden="true">→</i>
                 </button>
                 <button type="button" onClick={() => selectSection("cart")}>
                   <span>В корзине</span><strong>{cart.itemCount}</strong><small>{cart.itemCount ? formatPrice(cart.total) : "Корзина пуста"}</small><i aria-hidden="true">→</i>
@@ -285,12 +309,37 @@ export default function AccountClient({ profile, address }: { profile: Profile; 
           {activeSection === "orders" && (
             <section className="account-panel" aria-labelledby="account-orders-title">
               <header className="account-panel__heading"><div><p className="catalog-eyebrow">История</p><h2 id="account-orders-title">Мои заказы</h2></div></header>
-              <div className="account-empty-state">
-                <span aria-hidden="true">◇</span>
-                <h3>Заказов пока нет</h3>
-                <p>После первой покупки здесь появятся состав заказа, статус доставки и документы.</p>
-                <Link href="/catalog">Выбрать изделия</Link>
-              </div>
+              {orders.length > 0 ? (
+                <div className="account-orders-list">
+                  {orders.map((order) => (
+                    <article className="account-order" key={order.id}>
+                      <header className="account-order__header">
+                        <div>
+                          <strong>Заказ №{order.id}</strong>
+                          <span>{new Date(order.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}</span>
+                        </div>
+                        <small className="account-order__status">{ORDER_STATUS_LABELS[order.status] ?? order.status}</small>
+                      </header>
+                      <div className="account-order__items">
+                        {order.items.map((item) => (
+                          <div key={`${order.id}-${item.productId}-${item.title}`}>
+                            <span>{item.title} × {item.quantity}</span>
+                            <span>{formatPrice(item.priceRub * item.quantity)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="account-order__total"><span>Итого</span><strong>{formatPrice(order.totalRub)}</strong></div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="account-empty-state">
+                  <span aria-hidden="true">◇</span>
+                  <h3>Заказов пока нет</h3>
+                  <p>После первой покупки здесь появятся состав заказа, статус доставки и документы.</p>
+                  <Link href="/catalog">Выбрать изделия</Link>
+                </div>
+              )}
             </section>
           )}
 

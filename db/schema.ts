@@ -173,3 +173,72 @@ export const verificationCodes = pgTable("verification_codes", {
   attempts: integer("attempts").notNull().default(0),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
+
+/**
+ * Cart and orders (Phase 5). A logged-in user's cart persists here; a
+ * guest's cart lives in the browser only (see CartContext) — there is no
+ * server-side row for a guest cart at all.
+ */
+export const carts = pgTable("carts", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const cartItems = pgTable(
+  "cart_items",
+  {
+    id: serial("id").primaryKey(),
+    cartId: integer("cart_id")
+      .notNull()
+      .references(() => carts.id, { onDelete: "cascade" }),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    quantity: integer("quantity").notNull(),
+    addedAt: timestamp("added_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("cart_items_cart_product_unique").on(t.cartId, t.productId)],
+);
+
+export const orderStatusValues = ["pending_payment", "paid", "cancelled", "fulfilled"] as const;
+
+// An order is always self-contained (contact info copied directly onto the
+// row) so a guest checkout — the default, frictionless path — never needs a
+// user row. userId is nullable and set only when the buyer was logged in at
+// checkout, or later via the post-purchase account offer.
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  status: text("status", { enum: orderStatusValues }).notNull().default("pending_payment"),
+  contactName: text("contact_name").notNull(),
+  contactPhone: text("contact_phone").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  // Placeholder delivery capture for this phase — nullable because Phase 7
+  // replaces this with the СДЭК pickup-point/address mechanism.
+  deliveryCity: text("delivery_city"),
+  deliveryAddress: text("delivery_address"),
+  deliveryNote: text("delivery_note"),
+  subtotalRub: integer("subtotal_rub").notNull(),
+  shippingCostRub: integer("shipping_cost_rub"), // set in Phase 7
+  totalRub: integer("total_rub").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+// Snapshotted at order time — title/slug/price are copied, not just a live
+// FK, so an order stays fully readable even if the product is later edited
+// or removed from the catalogue.
+export const orderItems = pgTable("order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
+  productTitle: text("product_title").notNull(),
+  productSlug: text("product_slug").notNull(),
+  priceRub: integer("price_rub").notNull(),
+  quantity: integer("quantity").notNull(),
+});

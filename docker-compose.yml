@@ -27,3 +27,28 @@ services:
     command: ["run", "-c", "/etc/xray/config.json"]
     volumes:
       - ./xray/config.json:/etc/xray/config.json:ro
+
+  # Catalogue database (Phase 1). POSTGRES_DB/USER/PASSWORD come from the
+  # server's .env (docker compose auto-loads it for ${...} substitution in
+  # this file, same .env the app service injects wholesale via env_file).
+  # Port is published on 127.0.0.1 only — same localhost-only pattern as
+  # "app" above — but other services on this compose network (app, and a
+  # later Directus) can also reach it internally as host "postgres:5432"
+  # without any port publishing at all.
+  postgres:
+    image: postgres:16-alpine
+    container_name: woodandclay-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /opt/woodclay-pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

@@ -5,7 +5,15 @@ import { useCart } from "../CartContext";
 import { CatalogFooter, CatalogHeader } from "../catalog-components";
 import { formatPrice } from "../catalog-utils";
 
-export default function CartPageClient({ totalProductCount }: { totalProductCount: number }) {
+type CheckoutDefaults = { name: string; phone: string; email: string } | null;
+
+export default function CartPageClient({
+  totalProductCount,
+  checkoutDefaults,
+}: {
+  totalProductCount: number;
+  checkoutDefaults: CheckoutDefaults;
+}) {
   const { lines, itemCount, total, removeItem, setQuantity, clearCart } = useCart();
 
   return (
@@ -55,7 +63,7 @@ export default function CartPageClient({ totalProductCount }: { totalProductCoun
               <Link href="/catalog">← Продолжить покупки</Link>
             </aside>
           </section>
-          <CheckoutPreparation itemCount={itemCount} total={total} />
+          <CheckoutPreparation itemCount={itemCount} total={total} defaults={checkoutDefaults} />
         </>
       ) : (
         <section className="cart-page__empty">
@@ -70,7 +78,15 @@ export default function CartPageClient({ totalProductCount }: { totalProductCoun
   );
 }
 
-function CheckoutPreparation({ itemCount, total }: { itemCount: number; total: number }) {
+function CheckoutPreparation({
+  itemCount,
+  total,
+  defaults,
+}: {
+  itemCount: number;
+  total: number;
+  defaults: CheckoutDefaults;
+}) {
   return (
     <section className="checkout-preparation" id="checkout" aria-labelledby="checkout-heading">
       <header className="checkout-preparation__heading">
@@ -82,9 +98,9 @@ function CheckoutPreparation({ itemCount, total }: { itemCount: number; total: n
           <fieldset className="checkout-step">
             <legend><span>01</span><strong>Получатель</strong></legend>
             <div className="checkout-fields">
-              <label><span>Имя и фамилия</span><input type="text" name="customer-name" autoComplete="name" placeholder="Как к вам обращаться" /></label>
-              <label><span>Телефон</span><input type="tel" name="customer-phone" autoComplete="tel" placeholder="+7 900 000-00-00" /></label>
-              <label className="checkout-fields__wide"><span>Email для чека</span><input type="email" name="customer-email" autoComplete="email" placeholder="name@example.com" /></label>
+              <label><span>Имя и фамилия</span><input type="text" name="customer-name" autoComplete="name" placeholder="Как к вам обращаться" defaultValue={defaults?.name ?? ""} /></label>
+              <label><span>Телефон</span><input type="tel" name="customer-phone" autoComplete="tel" placeholder="+7 900 000-00-00" defaultValue={defaults?.phone ?? ""} /></label>
+              <label className="checkout-fields__wide"><span>Email для чека</span><input type="email" name="customer-email" autoComplete="email" placeholder="name@example.com" defaultValue={defaults?.email ?? ""} /></label>
             </div>
           </fieldset>
           <fieldset className="checkout-step checkout-integration" data-integration="cdek">

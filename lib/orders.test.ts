@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
 import { products, users } from "@/db/schema";
+import { SHIPPING_FLAT_RATE_RUB } from "@/lib/shipping";
 
 vi.mock("@/db/client", async () => {
   const { PGlite } = await import("@electric-sql/pglite");
@@ -48,7 +49,7 @@ async function insertProduct(stock: number) {
 }
 
 const contact = { name: "Проверка Тестова", phone: "+7 900 000-00-00", email: "guest@example.com" };
-const delivery = { city: "Москва", address: "Тверская, 1" };
+const delivery = { cdekPvzCode: "MSK123", cdekPvzCity: "Москва", cdekPvzAddress: "Тверская, 1" };
 
 beforeAll(async () => {
   await migrate(db, { migrationsFolder: "./drizzle" });
@@ -69,7 +70,7 @@ describe("createOrder", () => {
     if (!result.ok) return;
     expect(result.order.userId).toBeNull();
     expect(result.order.subtotalRub).toBe(2000);
-    expect(result.order.totalRub).toBe(2000);
+    expect(result.order.totalRub).toBe(2000 + SHIPPING_FLAT_RATE_RUB);
     expect(result.order.items).toEqual([
       expect.objectContaining({ productId, title: "Игрушка", quantity: 2, priceRub: 1000 }),
     ]);

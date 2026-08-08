@@ -36,6 +36,13 @@
       "when": 1786011569970,
       "tag": "0004_slim_midnight",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786204511465,
+      "tag": "0005_fluffy_scarecrow",
+      "breakpoints": true
     }
   ]
 }

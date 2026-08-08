@@ -217,11 +217,19 @@ export const orders = pgTable("orders", {
   contactName: text("contact_name").notNull(),
   contactPhone: text("contact_phone").notNull(),
   contactEmail: text("contact_email").notNull(),
-  // Placeholder delivery capture for this phase — nullable because Phase 7
-  // replaces this with the СДЭК pickup-point/address mechanism.
+  // Phase 5's provisional free-text capture — no longer populated by
+  // checkout (Phase 7 replaced it with the structured СДЭК fields below),
+  // kept in the schema for a possible future non-ПВЗ courier delivery mode.
   deliveryCity: text("delivery_city"),
   deliveryAddress: text("delivery_address"),
   deliveryNote: text("delivery_note"),
+  // The СДЭК pickup point (ПВЗ) chosen via the widget (Phase 7).
+  // cdekPvzCode is what matters for manually creating the shipment in the
+  // СДЭК cabinet; city/address are for display (личный кабинет, Directus,
+  // confirmation email).
+  cdekPvzCode: text("cdek_pvz_code"),
+  cdekPvzCity: text("cdek_pvz_city"),
+  cdekPvzAddress: text("cdek_pvz_address"),
   subtotalRub: integer("subtotal_rub").notNull(),
   shippingCostRub: integer("shipping_cost_rub"), // set in Phase 7
   totalRub: integer("total_rub").notNull(),

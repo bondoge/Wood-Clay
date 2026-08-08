@@ -148,6 +148,7 @@
 .account-order__items > div > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-order__items > div > span:last-child { flex-shrink: 0; }
 .account-order__total { display: flex; justify-content: space-between; padding-top: 12px; font-size: 13px; }
+.account-order__delivery { margin: 10px 0 0; color: #7b817a; font-size: 10px; line-height: 1.6; }
 
 .account-cart-list { border-top: 1px solid var(--account-line); }
 .account-cart-list article { min-height: 140px; padding: 16px 0; display: grid; grid-template-columns: 90px minmax(0,1fr) auto auto; align-items: center; gap: 17px; border-bottom: 1px solid var(--account-line); }

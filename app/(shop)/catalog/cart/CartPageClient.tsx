@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useCart, type CartLine } from "../CartContext";
 import { CatalogFooter, CatalogHeader } from "../catalog-components";
 import { formatPrice } from "../catalog-utils";
+import CdekPvzPicker, { type CdekPvz } from "./CdekPvzPicker";
+import { SHIPPING_FLAT_RATE_RUB } from "@/lib/shipping";
 
 type CheckoutDefaults = { name: string; phone: string; email: string } | null;
 
@@ -67,10 +69,10 @@ export default function CartPageClient({
             <aside className="cart-summary">
               <p className="catalog-eyebrow">Ваш заказ</p>
               <div><span>Товары · {itemCount}</span><span>{formatPrice(total)}</span></div>
-              <div><span>Доставка</span><span>После выбора адреса</span></div>
-              <div className="cart-summary__total"><strong>Итого</strong><strong>{formatPrice(total)}</strong></div>
+              <div><span>Доставка СДЭК</span><span>{formatPrice(SHIPPING_FLAT_RATE_RUB)}</span></div>
+              <div className="cart-summary__total"><strong>Итого</strong><strong>{formatPrice(total + SHIPPING_FLAT_RATE_RUB)}</strong></div>
               <a href="#checkout">Перейти к оформлению <span aria-hidden="true">↓</span></a>
-              <p>Точную стоимость доставки покажем после выбора способа получения.</p>
+              <p>Фиксированная стоимость доставки СДЭК до выбранного пункта выдачи.</p>
               <Link href="/catalog">← Продолжить покупки</Link>
             </aside>
           </section>
@@ -105,9 +107,16 @@ function CheckoutPreparation({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pvz, setPvz] = useState<CdekPvz | null>(null);
+  const grandTotal = total + SHIPPING_FLAT_RATE_RUB;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!pvz) {
+      setError("Выберите пункт выдачи СДЭК.");
+      return;
+    }
+
     const data = new FormData(event.currentTarget);
     const contact = {
       name: String(data.get("customer-name") ?? "").trim(),
@@ -115,8 +124,9 @@ function CheckoutPreparation({
       email: String(data.get("customer-email") ?? "").trim(),
     };
     const delivery = {
-      city: String(data.get("delivery-city") ?? "").trim(),
-      address: String(data.get("delivery-address") ?? "").trim(),
+      cdekPvzCode: pvz.code,
+      cdekPvzCity: pvz.city,
+      cdekPvzAddress: pvz.address,
       note: String(data.get("delivery-note") ?? "").trim() || undefined,
     };
     const consent = data.get("consent") === "on";
@@ -173,17 +183,9 @@ function CheckoutPreparation({
           </fieldset>
           <fieldset className="checkout-step checkout-integration" data-integration="cdek">
             <legend><span>02</span><strong>Доставка СДЭК</strong></legend>
-            <div className="checkout-integration__intro"><p>Выберите удобный способ получения заказа.</p></div>
-            <div className="checkout-option-grid" id="cdek-widget-root">
-              <label><input type="radio" name="delivery" value="cdek-pickup" defaultChecked /><span><strong>Пункт выдачи</strong><small>Рядом с домом или работой</small></span><em>Выбрать</em></label>
-              <label><input type="radio" name="delivery" value="cdek-courier" /><span><strong>Курьер</strong><small>Доставка до двери</small></span><em>Выбрать</em></label>
-            </div>
-            <p className="checkout-integration__note">
-              Точный выбор пункта выдачи появится после подключения СДЭК — пока укажите город и адрес, чтобы мы могли согласовать доставку.
-            </p>
+            <div className="checkout-integration__intro"><p>Выберите пункт выдачи, где будет удобно забрать заказ.</p></div>
+            <CdekPvzPicker value={pvz} onChange={setPvz} />
             <div className="checkout-fields">
-              <label><span>Город</span><input type="text" name="delivery-city" autoComplete="address-level2" required placeholder="Москва" /></label>
-              <label><span>Адрес</span><input type="text" name="delivery-address" autoComplete="street-address" required placeholder="Улица, дом, квартира" /></label>
               <label className="checkout-fields__wide"><span>Комментарий к доставке <small>необязательно</small></span><input type="text" name="delivery-note" placeholder="Ориентир, удобное время" /></label>
             </div>
           </fieldset>
@@ -195,14 +197,14 @@ function CheckoutPreparation({
         <aside className="checkout-order">
           <p className="catalog-eyebrow">К оплате</p>
           <div><span>{itemCount} {pluralizeItems(itemCount)}</span><span>{formatPrice(total)}</span></div>
-          <div><span>Доставка СДЭК</span><span>После выбора адреса</span></div>
-          <div className="checkout-order__total"><strong>Итого</strong><strong>{formatPrice(total)}</strong></div>
+          <div><span>Доставка СДЭК</span><span>{formatPrice(SHIPPING_FLAT_RATE_RUB)}</span></div>
+          <div className="checkout-order__total"><strong>Итого</strong><strong>{formatPrice(grandTotal)}</strong></div>
           {error && <p className="checkout-order__error" role="alert">{error}</p>}
           <label className="consent-check">
             <input type="checkbox" name="consent" required />
             <span>Согласен(на) с <Link href="/privacy">политикой конфиденциальности</Link> и обработкой персональных данных</span>
           </label>
-          <button type="submit" disabled={submitting}>{submitting ? "Оформляем…" : "Перейти к оплате"}</button>
+          <button type="submit" disabled={submitting || !pvz}>{submitting ? "Оформляем…" : "Перейти к оплате"}</button>
         </aside>
       </form>
     </section>

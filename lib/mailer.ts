@@ -39,19 +39,25 @@ export async function sendOrderConfirmationEmail(order: {
   id: number;
   contactEmail: string;
   totalRub: number;
+  cdekPvzCity: string | null;
+  cdekPvzAddress: string | null;
   items: { title: string; priceRub: number; quantity: number }[];
 }) {
   const { transport, from } = getTransport();
   const lines = order.items
     .map((item) => `${item.title} × ${item.quantity} — ${formatPrice(item.priceRub * item.quantity)}`)
     .join("\n");
+  const pickupPoint =
+    order.cdekPvzCity && order.cdekPvzAddress
+      ? `\n\nПункт выдачи СДЭК: ${order.cdekPvzCity}, ${order.cdekPvzAddress}`
+      : "";
 
   await transport.sendMail({
     from,
     to: order.contactEmail,
     subject: `Заказ №${order.id} — Wood&Clay`,
     text:
-      `Спасибо за заказ!\n\n${lines}\n\nИтого: ${formatPrice(order.totalRub)}\n\n` +
+      `Спасибо за заказ!\n\n${lines}\n\nИтого: ${formatPrice(order.totalRub)}${pickupPoint}\n\n` +
       `Мы свяжемся с вами, чтобы подтвердить оплату и доставку.`,
   });
 }

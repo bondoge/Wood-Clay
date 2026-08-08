@@ -14,8 +14,9 @@ const checkoutSchema = z.object({
     email: z.email().trim().toLowerCase(),
   }),
   delivery: z.object({
-    city: z.string().trim().min(1).max(200),
-    address: z.string().trim().min(1).max(400),
+    cdekPvzCode: z.string().trim().min(1).max(50),
+    cdekPvzCity: z.string().trim().min(1).max(200),
+    cdekPvzAddress: z.string().trim().min(1).max(400),
     note: z.string().trim().max(1000).optional(),
   }),
   consent: z.literal(true),

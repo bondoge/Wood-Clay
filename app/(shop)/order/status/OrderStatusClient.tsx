@@ -85,6 +85,11 @@ function OrderConfirmation({ order, isGuest }: { order: OrderSummary; isGuest: b
         ))}
       </div>
       <div className="order-confirmation__total"><span>Итого</span><span>{formatPrice(order.totalRub)}</span></div>
+      {order.cdekPvzAddress && (
+        <p className="order-confirmation__delivery">
+          Пункт выдачи СДЭК: {order.cdekPvzCity ? `${order.cdekPvzCity}, ` : ""}{order.cdekPvzAddress}
+        </p>
+      )}
       <div className="order-confirmation__actions">
         <Link href="/catalog">Продолжить покупки</Link>
       </div>

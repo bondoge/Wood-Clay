@@ -5,6 +5,7 @@ import { decrementStock, incrementStock } from "@/lib/inventory";
 import { getCart, clearCart } from "@/lib/cart";
 import { sendOrderConfirmationEmail, sendPaymentReceivedEmail } from "@/lib/mailer";
 import { createPayment, getPayment } from "@/lib/yookassa";
+import { SHIPPING_FLAT_RATE_RUB } from "@/lib/shipping";
 
 export type OrderItemSummary = {
   productId: number | null;
@@ -24,6 +25,9 @@ export type OrderSummary = {
   deliveryCity: string | null;
   deliveryAddress: string | null;
   deliveryNote: string | null;
+  cdekPvzCode: string | null;
+  cdekPvzCity: string | null;
+  cdekPvzAddress: string | null;
   subtotalRub: number;
   shippingCostRub: number | null;
   totalRub: number;
@@ -34,7 +38,7 @@ export type OrderSummary = {
 export type CreateOrderInput = {
   userId: string | null;
   contact: { name: string; phone: string; email: string };
-  delivery: { city: string; address: string; note?: string };
+  delivery: { cdekPvzCode: string; cdekPvzCity: string; cdekPvzAddress: string; note?: string };
   // Only used for a guest checkout (userId === null) — there's no server
   // cart to read for a guest. For a logged-in user this is ignored; their
   // persisted cart_items are the authoritative source, re-read fresh here.
@@ -104,11 +108,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
           contactName: input.contact.name,
           contactPhone: input.contact.phone,
           contactEmail: input.contact.email,
-          deliveryCity: input.delivery.city,
-          deliveryAddress: input.delivery.address,
+          cdekPvzCode: input.delivery.cdekPvzCode,
+          cdekPvzCity: input.delivery.cdekPvzCity,
+          cdekPvzAddress: input.delivery.cdekPvzAddress,
           deliveryNote: input.delivery.note ?? null,
           subtotalRub,
-          totalRub: subtotalRub,
+          shippingCostRub: SHIPPING_FLAT_RATE_RUB,
+          totalRub: subtotalRub + SHIPPING_FLAT_RATE_RUB,
         })
         .returning();
 

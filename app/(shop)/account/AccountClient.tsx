@@ -32,6 +32,8 @@ type Order = {
   status: string;
   totalRub: number;
   createdAt: Date;
+  cdekPvzCity: string | null;
+  cdekPvzAddress: string | null;
   items: OrderItem[];
 };
 
@@ -329,6 +331,11 @@ export default function AccountClient({
                         ))}
                       </div>
                       <div className="account-order__total"><span>Итого</span><strong>{formatPrice(order.totalRub)}</strong></div>
+                      {order.cdekPvzAddress && (
+                        <p className="account-order__delivery">
+                          Пункт выдачи СДЭК: {order.cdekPvzCity ? `${order.cdekPvzCity}, ` : ""}{order.cdekPvzAddress}
+                        </p>
+                      )}
                     </article>
                   ))}
                 </div>

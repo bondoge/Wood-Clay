@@ -767,6 +767,9 @@ export default function Home() {
             <a href="#custom">Корпоративным клиентам</a>
             <Link href={CATALOG_HREF}>Каталог</Link>
             <Link href={ACCOUNT_HREF}>Личный кабинет</Link>
+            <Link href="/oferta">Оферта</Link>
+            <Link href="/vozvrat">Возврат и обмен</Link>
+            <Link href="/rekvizity">Реквизиты</Link>
           </nav>
 
           <div className="footer-column footer-column--contacts">

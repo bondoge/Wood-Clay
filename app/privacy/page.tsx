@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import "./privacy.css";
+import { COMPANY } from "@/lib/company";
+import "../legal.css";
 
 export const metadata: Metadata = {
   title: "Политика конфиденциальности — Wood&Clay",
@@ -14,7 +15,7 @@ const sections = [
     content: (
       <>
         <p>Настоящая политика описывает, как интернет-магазин Wood&amp;Clay обрабатывает и защищает персональные данные посетителей сайта, покупателей и представителей корпоративных клиентов.</p>
-        <p>Оператор персональных данных — владелец интернет-магазина Wood&amp;Clay. Связаться по вопросам обработки данных можно по адресу <a href="mailto:woodandclay.help@mail.ru">woodandclay.help@mail.ru</a> или телефону <a href="tel:+79153909884">+7 915 390-98-84</a>.</p>
+        <p>Оператор персональных данных — {COMPANY.legalName} (ИНН {COMPANY.inn}, ОГРНИП {COMPANY.ogrnip}), владелец интернет-магазина Wood&amp;Clay. Связаться по вопросам обработки данных можно по адресу <a href={`mailto:${COMPANY.supportEmail}`}>{COMPANY.supportEmail}</a> или телефону <a href={COMPANY.supportPhoneHref}>{COMPANY.supportPhone}</a>. Полные реквизиты — на странице <Link href="/rekvizity">«Реквизиты»</Link>.</p>
       </>
     ),
   },
@@ -99,20 +100,21 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <main className="privacy-page">
-      <header className="privacy-nav">
-        <Link className="privacy-brand" href="/" aria-label="Wood&Clay — на главную">
+    <main className="legal-page">
+      <header className="legal-nav">
+        <Link className="legal-brand" href="/" aria-label="Wood&Clay — на главную">
           <img src="/woodclay-mark.png" alt="" width="76" height="58" />
           <img src="/woodclay-wordmark.svg" alt="Wood&Clay" width="100" height="19" />
         </Link>
         <nav aria-label="Навигация">
           <Link href="/">Главная</Link>
-          <Link href="/catalog">Каталог</Link>
-          <Link href="/account">Кабинет</Link>
+          <Link href="/oferta">Оферта</Link>
+          <Link href="/vozvrat">Возврат</Link>
+          <Link href="/rekvizity">Реквизиты</Link>
         </nav>
       </header>
 
-      <section className="privacy-hero">
+      <section className="legal-hero">
         <p>Правовые документы · версия от 5 августа 2026</p>
         <h1>Политика <span>конфиденциальности</span></h1>
         <div>
@@ -121,9 +123,9 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      <section className="privacy-content" aria-label="Содержание политики">
+      <section className="legal-content" aria-label="Содержание политики">
         {sections.map((section) => (
-          <article className="privacy-section" key={section.number}>
+          <article className="legal-section" key={section.number}>
             <span>{section.number}</span>
             <h2>{section.title}</h2>
             <div>{section.content}</div>
@@ -131,7 +133,7 @@ export default function PrivacyPage() {
         ))}
       </section>
 
-      <footer className="privacy-footer">
+      <footer className="legal-footer">
         <span>© 2026 Wood&amp;Clay</span>
         <Link href="/">Вернуться на главную</Link>
         <a href="mailto:woodandclay.help@mail.ru">woodandclay.help@mail.ru</a>

@@ -202,6 +202,9 @@ export function CatalogFooter() {
             <Link href="/#custom">Корпоративным клиентам</Link>
             <Link href="/catalog">Каталог</Link>
             <Link href="/account">Личный кабинет</Link>
+            <Link href="/oferta">Оферта</Link>
+            <Link href="/vozvrat">Возврат и обмен</Link>
+            <Link href="/rekvizity">Реквизиты</Link>
             <Link href="/privacy">Политика конфиденциальности</Link>
           </nav>
 

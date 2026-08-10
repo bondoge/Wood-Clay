@@ -88,12 +88,13 @@ services:
       DB_DATABASE: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
-      # Served at its own port (nginx has a second server block on :8080
-      # proxying 1:1 to this port), not a URL sub-path — Directus's admin
-      # SPA isn't built to be sub-path-served: its static assets are rooted
-      # at /assets/... while client-side routes need the prefix preserved,
-      # and no reverse-proxy rewrite reconciles both. See docs/DIRECTUS.md.
-      PUBLIC_URL: http://161.104.44.9:8080/
+      # Served at its own domain (nginx has a dedicated server block for
+      # admin.woodclay.ru, HTTPS via Let's Encrypt, proxying 1:1 to this
+      # port), not a URL sub-path — Directus's admin SPA isn't built to be
+      # sub-path-served: its static assets are rooted at /assets/... while
+      # client-side routes need the prefix preserved, and no reverse-proxy
+      # rewrite reconciles both. See docs/DIRECTUS.md.
+      PUBLIC_URL: https://admin.woodclay.ru/
       EXTENSIONS_PATH: /directus/extensions
       # Lets <img> thumbnails pointed at the Selectel bucket (source_images
       # URLs) render in the Data Studio without being blocked by Directus's

@@ -14,10 +14,12 @@ same Directus version via the official Docker image, against Postgres.
 
 ## Why it's on its own port, not a URL path
 
-The admin is reachable at `http://161.104.44.9:8080/` — a second nginx
-`server` block listening on `:8080`, proxying 1:1 to the `directus` container
-on `127.0.0.1:8055`, no path rewriting. Not `/admin/` on the main site's
-port 80.
+The admin is reachable at `https://admin.woodclay.ru/` — a dedicated nginx
+`server` block for that subdomain (Let's Encrypt cert, HTTP→HTTPS redirect),
+proxying 1:1 to the `directus` container on `127.0.0.1:8055`, no path
+rewriting. Not `/admin/` on the main site's domain. (Before the subdomain +
+cert existed, this was `http://161.104.44.9:8080/` — same nginx pattern, just
+a bare IP:port instead of a real domain, since a cert needs a domain name.)
 
 That was the first attempt, and it doesn't work: Directus's admin SPA isn't
 built to be served from a URL sub-path. Its static assets are served at a
@@ -33,10 +35,10 @@ either way.
 
 ## Security TODOs — do not lose track of these
 
-- **Admin login is plain HTTP for now.** `ADMIN_PASSWORD` in the server
-  `.env` is a throwaway value, not reused anywhere else. The moment a domain
-  and HTTPS exist for this server, switch the admin to HTTPS-only and rotate
-  `ADMIN_PASSWORD` before any real customer data exists anywhere on the site.
+- **HTTPS is on (`admin.woodclay.ru`, 2026-08-10) — `ADMIN_PASSWORD` rotation
+  is still outstanding.** It's still the original throwaway value in the
+  server `.env`, not reused anywhere else. Rotate it before any real customer
+  data exists anywhere on the site.
 - **Directus currently reuses the `woodclay_app` Postgres user** — the same
   role the site will eventually read through — rather than a dedicated
   least-privilege role of its own. Acceptable for now (small project, sole
@@ -86,7 +88,7 @@ default curation-queue view (`style_reviewed = false`, sorted by
 instance by overriding its `.env` lookups for that one run:
 
 ```bash
-PUBLIC_URL=http://161.104.44.9:8080/ \
+PUBLIC_URL=https://admin.woodclay.ru/ \
 ADMIN_EMAIL=<server admin email> \
 ADMIN_PASSWORD=<server admin password> \
 node scripts/configure.mjs

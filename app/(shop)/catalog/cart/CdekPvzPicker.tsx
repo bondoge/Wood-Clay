@@ -23,8 +23,9 @@ type Office = { code: string; name: string; address: string; city: string; workT
 //
 // Inline, not a modal — the city field is the first thing visible in this
 // checkout step, map + list appear directly beneath it once a city
-// resolves. Clicking a pin selects that point immediately, same as
-// clicking its list row.
+// resolves. Clicking a pin or a list row only marks it as the pending
+// pick (browsing around doesn't commit anything) — "Выбрать" is what
+// actually confirms and closes the picker.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- no official types package for the plain JS API v2.1; not worth a new dependency for this small a surface.
 type YmapsApi = any;
@@ -58,10 +59,16 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
   const [offices, setOffices] = useState<Office[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The point a click marked, not yet committed — "Выбрать" is what
+  // actually applies it. Starts at the already-confirmed pick (if any) so
+  // reopening via "Изменить" without touching anything still has a valid
+  // pending choice.
+  const [pendingCode, setPendingCode] = useState<string | null>(value?.code ?? null);
 
   const cityInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<YmapsApi | null>(null);
+  const placemarksRef = useRef(new Map<string, YmapsApi>());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => () => clearTimeout(debounceRef.current), []);
@@ -70,6 +77,7 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
     setCityQuery(city);
     setSuggestions(null);
     setOffices(null);
+    setPendingCode(null);
     setError(null);
     setLoading(true);
     try {
@@ -91,6 +99,7 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
   function handleEdit() {
     setIsEditing(true);
     setError(null);
+    setPendingCode(value?.code ?? null);
     // Reopen where the customer left off — same city, same map, current
     // pickup point still marked — rather than making them search again.
     // Only re-fetch if we somehow don't already have that city's offices
@@ -128,7 +137,14 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
     }, 300);
   }
 
-  function handleSelectOffice(office: Office) {
+  function handlePick(office: Office) {
+    setPendingCode(office.code);
+    mapInstanceRef.current?.setCenter([office.lat, office.lon], mapInstanceRef.current.getZoom(), { duration: 200 });
+  }
+
+  function handleConfirm() {
+    const office = offices?.find((o) => o.code === pendingCode);
+    if (!office) return;
     onChange({ code: office.code, city: office.city, address: office.address, name: office.name, workTime: office.workTime });
     // Tear the map down here, synchronously, while its container is still
     // mounted — the container div only exists while isEditing is true, so
@@ -148,7 +164,7 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
     if (!apiKey || !mapContainerRef.current) return;
 
     let cancelled = false;
-    const current = offices.find((o) => o.code === value?.code) ?? offices[0];
+    const current = offices.find((o) => o.code === pendingCode) ?? offices[0];
 
     loadYmaps(apiKey)
       .then((ymaps) => {
@@ -159,15 +175,17 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
           { suppressMapOpenBlock: true },
         );
         mapInstanceRef.current = map;
+        placemarksRef.current.clear();
 
         offices.forEach((office) => {
           const placemark = new ymaps.Placemark(
             [office.lat, office.lon],
             { balloonContentHeader: office.name, balloonContentBody: office.address },
-            { preset: office.code === value?.code ? "islands#darkGreenIcon" : "islands#greenDotIcon" },
+            { preset: office.code === current.code ? "islands#darkGreenIcon" : "islands#greenDotIcon" },
           );
-          placemark.events.add("click", () => handleSelectOffice(office));
+          placemark.events.add("click", () => handlePick(office));
           map.geoObjects.add(placemark);
+          placemarksRef.current.set(office.code, placemark);
         });
 
         if (offices.length > 1) {
@@ -181,8 +199,15 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
       mapInstanceRef.current?.destroy();
       mapInstanceRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSelectOffice is stable in effect (only reads/sets state, no external deps that change its behavior per-render)
-  }, [offices, isEditing, value?.code]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pendingCode read only for one-off initial centering here; reacting to every change would recreate the whole map on each click instead of just restyling a pin (handled below)
+  }, [offices, isEditing]);
+
+  // Restyle pins as the pending pick changes, without recreating the map.
+  useEffect(() => {
+    placemarksRef.current.forEach((placemark, code) => {
+      placemark.options.set("preset", code === pendingCode ? "islands#darkGreenIcon" : "islands#greenDotIcon");
+    });
+  }, [pendingCode]);
 
   return (
     <div className="cdek-picker">
@@ -229,24 +254,29 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
           {error && <p className="cdek-picker__error" role="alert">{error}</p>}
 
           {offices && offices.length > 0 && (
-            <div className="cdek-offices-layout">
-              <div className="cdek-offices-map" ref={mapContainerRef} aria-hidden="true" />
-              <ul className="cdek-office-list">
-                {offices.map((office) => (
-                  <li key={office.code}>
-                    <button
-                      type="button"
-                      className={office.code === value?.code ? "is-current" : undefined}
-                      onClick={() => handleSelectOffice(office)}
-                    >
-                      <strong>{office.name}</strong>
-                      <span>{office.address}</span>
-                      {office.workTime && <small>{office.workTime}</small>}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <>
+              <div className="cdek-offices-layout">
+                <div className="cdek-offices-map" ref={mapContainerRef} aria-hidden="true" />
+                <ul className="cdek-office-list">
+                  {offices.map((office) => (
+                    <li key={office.code}>
+                      <button
+                        type="button"
+                        className={office.code === pendingCode ? "is-current" : undefined}
+                        onClick={() => handlePick(office)}
+                      >
+                        <strong>{office.name}</strong>
+                        <span>{office.address}</span>
+                        {office.workTime && <small>{office.workTime}</small>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <button type="button" className="cdek-picker__confirm" disabled={!pendingCode} onClick={handleConfirm}>
+                Выбрать
+              </button>
+            </>
           )}
         </div>
       )}

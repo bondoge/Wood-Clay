@@ -301,8 +301,37 @@ main {
   justify-self: end;
 }
 
+/* .catalog-nav__account / .mini-cart__trigger are shared with the catalog
+   page's header (see catalog-components.tsx's HeaderAccountActions) — their
+   base styling in catalog.css is tuned for the catalog page's opaque cream
+   bar. Restyled here as translucent glass to stay legible over this page's
+   dark video hero, matching the existing .catalog-cta glass-pill idiom. */
+.site-header .catalog-nav__avatar {
+  color: #2a231e;
+  background: #fffdf8;
+}
+
+.site-header .mini-cart__trigger {
+  color: #fffdf8;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: background 180ms ease;
+}
+
+.site-header .mini-cart__trigger:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.site-header .mini-cart__trigger b {
+  color: #2a231e;
+  background: #fffdf8;
+}
+
 .site-header nav a {
   position: relative;
+  white-space: nowrap;
   transition: color 180ms ease;
 }
 
@@ -2121,6 +2150,11 @@ button:focus-visible {
 
   .site-header__nav {
     display: none !important;
+  }
+
+  .site-header__actions {
+    gap: 6px;
+    font-size: 11px;
   }
 
   .hero__content {

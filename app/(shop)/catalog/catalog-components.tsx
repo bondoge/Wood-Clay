@@ -9,10 +9,6 @@ import type { ProductView } from "./product-view";
 import { formatPrice } from "./catalog-utils";
 
 export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "account" }) {
-  const { data: session } = useSession();
-  const displayName = session?.user?.name?.trim();
-  const initial = (displayName?.[0] ?? session?.user?.email?.[0] ?? "").toUpperCase();
-
   return (
     <header className="catalog-nav">
       <Link className="catalog-brand" href="/" aria-label="Wood&Clay — на главную">
@@ -27,18 +23,33 @@ export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "
       </nav>
 
       <div className="catalog-nav__actions">
-        <Link className={current === "catalog" ? "is-current" : undefined} href="/catalog">Каталог</Link>
-        {session?.user ? (
-          <Link className={`catalog-nav__account${current === "account" ? " is-current" : ""}`} href="/account">
-            <span className="catalog-nav__avatar" aria-hidden="true">{initial}</span>
-            {displayName || "Кабинет"}
-          </Link>
-        ) : (
-          <Link className={current === "account" ? "is-current" : undefined} href="/account/register">Зарегистрироваться</Link>
-        )}
-        <MiniCart />
+        <HeaderAccountActions current={current} />
       </div>
     </header>
+  );
+}
+
+// Shared with the home page's own header (see app/HomeClient.tsx) so the
+// catalog/account/cart cluster is identical everywhere — same links, same
+// session-awareness, same cart drawer — rather than two hand-kept copies.
+export function HeaderAccountActions({ current }: { current?: "catalog" | "account" }) {
+  const { data: session } = useSession();
+  const displayName = session?.user?.name?.trim();
+  const initial = (displayName?.[0] ?? session?.user?.email?.[0] ?? "").toUpperCase();
+
+  return (
+    <>
+      <Link className={current === "catalog" ? "is-current" : undefined} href="/catalog">Каталог</Link>
+      {session?.user ? (
+        <Link className={`catalog-nav__account${current === "account" ? " is-current" : ""}`} href="/account">
+          <span className="catalog-nav__avatar" aria-hidden="true">{initial}</span>
+          <span className="catalog-nav__name">{displayName || "Кабинет"}</span>
+        </Link>
+      ) : (
+        <Link className={current === "account" ? "is-current" : undefined} href="/account/register">Создать аккаунт</Link>
+      )}
+      <MiniCart />
+    </>
   );
 }
 

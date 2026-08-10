@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CollectionsBlock } from "./(shop)/catalog/CollectionsBlock";
+import { HeaderAccountActions } from "./(shop)/catalog/catalog-components";
 import type { CollectionTile } from "./(shop)/catalog/collections";
 
 const BASE_URL =
@@ -259,9 +260,8 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
             <a href="#custom">Контакты</a>
           </nav>
 
-          <nav className="site-header__actions" aria-label="Каталог и кабинет">
-            <Link href={CATALOG_HREF}>Каталог</Link>
-            <Link href={ACCOUNT_HREF}>Мой кабинет</Link>
+          <nav className="site-header__actions" aria-label="Каталог, кабинет и корзина">
+            <HeaderAccountActions />
           </nav>
         </header>
 

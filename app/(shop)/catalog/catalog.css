@@ -64,6 +64,7 @@
 
 .catalog-nav a {
   position: relative;
+  white-space: nowrap;
 }
 
 .catalog-nav__account {
@@ -902,6 +903,8 @@
 
 .product-card {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .product-card__media {
@@ -985,6 +988,9 @@
 
 .product-card__body {
   padding: 17px 4px 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
 .product-card__type {
@@ -1017,6 +1023,7 @@
 }
 
 .product-card__footer {
+  margin-top: auto;
   padding-top: 14px;
   display: flex;
   align-items: center;
@@ -1229,7 +1236,7 @@
   }
 
   .catalog-nav__actions {
-    gap: 12px;
+    gap: 6px;
     font-size: 11px;
   }
 
@@ -2201,6 +2208,15 @@
     width: 38px;
     padding: 0;
     justify-content: center;
+  }
+
+  /* Guards against the nav overflowing off-screen for long account names —
+     see catalog-nav__actions/site-header__actions widths at this width. */
+  .catalog-nav__name {
+    max-width: 64px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .mini-cart__trigger > span {

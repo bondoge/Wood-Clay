@@ -1,4 +1,4 @@
-import { pgTable, text, integer, serial, boolean, real, timestamp, jsonb, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, serial, boolean, timestamp, jsonb, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 
 /**
  * The catalogue lives in server-hosted PostgreSQL (Phase 1 — previously a
@@ -44,9 +44,7 @@ export const products = pgTable(
     priceRub: integer("price_rub").notNull(),
     stock: integer("stock").notNull(),
     style: text("style", { enum: styleValues }).notNull().default("author"),
-    styleConfidence: real("style_confidence"), // 0..1 — the seed LLM's guess certainty
     published: boolean("published").notNull().default(false),
-    sortOrder: integer("sort_order").notNull().default(0),
     // The site reads only these, never wb_* — always populated (backfilled
     // 2026-08-10 for every existing row; the seed script is expected to
     // populate both wb_* and own_* on every future import too, so this is

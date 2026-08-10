@@ -42,7 +42,6 @@ beforeAll(async () => {
       slug: "gzhel-published",
       style: "gzhel",
       published: true,
-      sortOrder: 2,
     },
     {
       ...baseProduct,
@@ -54,7 +53,6 @@ beforeAll(async () => {
       slug: "khokhloma-published",
       style: "khokhloma",
       published: true,
-      sortOrder: 1,
     },
     {
       ...baseProduct,

@@ -64,6 +64,13 @@
       "when": 1786376287017,
       "tag": "0008_flippant_glorian",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786379293664,
+      "tag": "0009_strange_kat_farrell",
+      "breakpoints": true
     }
   ]
 }

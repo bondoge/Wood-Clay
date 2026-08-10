@@ -21,9 +21,12 @@ type Office = { code: string; name: string; address: string; city: string; workT
 // still free under standard conditions, and we never call ymaps.geocode()
 // or a Suggest control, which is the part that would hit that paywall.
 //
-// UI deliberately has no preselect grid of popular cities — just a single
-// input with live suggestions, then the map + list, matching how other
-// Tilda-built Russian shops (e.g. Glow Me) present this same step.
+// Inline, not a modal — the city field is the first thing visible in this
+// checkout step, map + list appear directly beneath it once a city
+// resolves. Clicking a pin selects that point immediately, same as
+// clicking its list row — earlier versions only highlighted the row on
+// pin click and made the actual click on the list required, which tested
+// as a confusing two-step "did that work?" interaction.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- no official types package for the plain JS API v2.1; not worth a new dependency for this small a surface.
 type YmapsApi = any;
@@ -50,38 +53,32 @@ function loadYmaps(apiKey: string): Promise<YmapsApi> {
 }
 
 export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | null; onChange: (pvz: CdekPvz) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(!value);
   const [cityQuery, setCityQuery] = useState("");
   const [suggestions, setSuggestions] = useState<CitySuggestion[] | null>(null);
   const [suggestLoading, setSuggestLoading] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [offices, setOffices] = useState<Office[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [highlightedCode, setHighlightedCode] = useState<string | null>(null);
 
-  const cityInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<YmapsApi | null>(null);
-  const listItemRefs = useRef(new Map<string, HTMLButtonElement>());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => () => clearTimeout(debounceRef.current), []);
 
-  function handleOpen() {
-    setIsOpen(true);
+  function handleEdit() {
+    setIsEditing(true);
     setSuggestions(null);
     setError(null);
-    if (!selectedCity) setCityQuery("");
-    requestAnimationFrame(() => cityInputRef.current?.focus());
+    setCityQuery("");
+    setOffices(null);
   }
 
   async function loadOffices(city: string) {
-    setSelectedCity(city);
     setCityQuery(city);
     setSuggestions(null);
     setOffices(null);
-    setHighlightedCode(null);
     setError(null);
     setLoading(true);
     try {
@@ -122,7 +119,7 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
 
   function handleSelectOffice(office: Office) {
     onChange({ code: office.code, city: office.city, address: office.address, name: office.name, workTime: office.workTime });
-    setIsOpen(false);
+    setIsEditing(false);
   }
 
   useEffect(() => {
@@ -147,10 +144,7 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
             { balloonContentHeader: office.name, balloonContentBody: office.address },
             { preset: "islands#greenDotIcon" },
           );
-          placemark.events.add("click", () => {
-            setHighlightedCode(office.code);
-            listItemRefs.current.get(office.code)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-          });
+          placemark.events.add("click", () => handleSelectOffice(office));
           map.geoObjects.add(placemark);
         });
 
@@ -165,94 +159,71 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
       mapInstanceRef.current?.destroy();
       mapInstanceRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSelectOffice is stable in effect (only reads/sets state, no external deps that change its behavior per-render)
   }, [offices]);
 
   return (
     <div className="cdek-picker">
-      {value ? (
+      {value && !isEditing ? (
         <div className="cdek-picker__summary">
           <div>
             <strong>{value.name || "Пункт выдачи СДЭК"}</strong>
             <span>{value.city ? `${value.city}, ` : ""}{value.address}</span>
             {value.workTime && <small>{value.workTime}</small>}
           </div>
-          <button type="button" onClick={handleOpen}>Изменить</button>
+          <button type="button" onClick={handleEdit}>Изменить</button>
         </div>
       ) : (
-        <button type="button" className="cdek-picker__trigger" onClick={handleOpen}>
-          Выбрать пункт выдачи
-        </button>
-      )}
-
-      <div className={`cdek-modal${isOpen ? " is-open" : ""}`} aria-hidden={!isOpen}>
-        <div className="cdek-modal__backdrop" onClick={() => setIsOpen(false)} />
-        <div className="cdek-modal__panel">
-          <button type="button" className="cdek-modal__close" onClick={() => setIsOpen(false)} aria-label="Закрыть">
-            ✕
-          </button>
-
-          <div className="cdek-modal__head">
-            <h3 className="cdek-modal__title">Пункт выдачи СДЭК</h3>
-
-            {/* Not a <form> — this picker renders inside CartPageClient's
-                own checkout <form>, and nested forms are invalid HTML
-                (the browser silently mangles them, breaking submission). */}
-            <div className="cdek-city-search">
-              <input
-                ref={cityInputRef}
-                type="text"
-                placeholder="Введите город"
-                value={cityQuery}
-                onChange={(e) => handleCityInputChange(e.target.value)}
-              />
-              {suggestLoading && <p className="cdek-modal__status">Ищем город…</p>}
-              {suggestions && suggestions.length > 0 && (
-                <ul className="cdek-city-matches">
-                  {suggestions.map((city) => (
-                    <li key={city.name}>
-                      <button type="button" onClick={() => loadOffices(city.name)}>
-                        {city.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {suggestions?.length === 0 && !suggestLoading && (
-                <p className="cdek-picker__error" role="alert">Город не найден.</p>
-              )}
-            </div>
-
-            {loading && <p className="cdek-modal__status">Загружаем пункты выдачи…</p>}
-            {error && <p className="cdek-picker__error" role="alert">{error}</p>}
+        <div className="cdek-picker__panel">
+          {/* Not a <form> — this picker renders inside CartPageClient's
+              own checkout <form>, and nested forms are invalid HTML
+              (the browser silently mangles them, breaking submission). */}
+          <div className="cdek-city-search">
+            <input
+              type="text"
+              placeholder="Введите город доставки"
+              value={cityQuery}
+              onChange={(e) => handleCityInputChange(e.target.value)}
+              autoFocus={isEditing && !!value}
+            />
+            {suggestLoading && <p className="cdek-picker__status">Ищем город…</p>}
+            {suggestions && suggestions.length > 0 && (
+              <ul className="cdek-city-matches">
+                {suggestions.map((city) => (
+                  <li key={city.name}>
+                    <button type="button" onClick={() => loadOffices(city.name)}>
+                      {city.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {suggestions?.length === 0 && !suggestLoading && (
+              <p className="cdek-picker__error" role="alert">Город не найден.</p>
+            )}
           </div>
 
+          {loading && <p className="cdek-picker__status">Загружаем пункты выдачи…</p>}
+          {error && <p className="cdek-picker__error" role="alert">{error}</p>}
+
           {offices && offices.length > 0 && (
-            <div className="cdek-modal__body">
-              <div className="cdek-offices-layout">
-                <div className="cdek-offices-map" ref={mapContainerRef} aria-hidden="true" />
-                <ul className="cdek-office-list">
-                  {offices.map((office) => (
-                    <li key={office.code}>
-                      <button
-                        type="button"
-                        ref={(el) => {
-                          if (el) listItemRefs.current.set(office.code, el);
-                        }}
-                        className={office.code === highlightedCode ? "is-highlighted" : undefined}
-                        onClick={() => handleSelectOffice(office)}
-                      >
-                        <strong>{office.name}</strong>
-                        <span>{office.address}</span>
-                        {office.workTime && <small>{office.workTime}</small>}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="cdek-offices-layout">
+              <div className="cdek-offices-map" ref={mapContainerRef} aria-hidden="true" />
+              <ul className="cdek-office-list">
+                {offices.map((office) => (
+                  <li key={office.code}>
+                    <button type="button" onClick={() => handleSelectOffice(office)}>
+                      <strong>{office.name}</strong>
+                      <span>{office.address}</span>
+                      {office.workTime && <small>{office.workTime}</small>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

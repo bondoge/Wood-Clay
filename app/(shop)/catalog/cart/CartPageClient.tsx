@@ -127,7 +127,6 @@ function CheckoutPreparation({
       cdekPvzCode: pvz.code,
       cdekPvzCity: pvz.city,
       cdekPvzAddress: pvz.address,
-      note: String(data.get("delivery-note") ?? "").trim() || undefined,
     };
     const consent = data.get("consent") === "on";
 
@@ -185,9 +184,6 @@ function CheckoutPreparation({
             <legend><span>02</span><strong>Доставка СДЭК</strong></legend>
             <div className="checkout-integration__intro"><p>Выберите пункт выдачи, где будет удобно забрать заказ.</p></div>
             <CdekPvzPicker value={pvz} onChange={setPvz} />
-            <div className="checkout-fields">
-              <label className="checkout-fields__wide"><span>Комментарий к доставке <small>необязательно</small></span><input type="text" name="delivery-note" placeholder="Ориентир, удобное время" /></label>
-            </div>
           </fieldset>
           <fieldset className="checkout-step checkout-integration" data-integration="yookassa">
             <legend><span>03</span><strong>Оплата</strong></legend>

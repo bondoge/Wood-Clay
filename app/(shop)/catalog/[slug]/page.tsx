@@ -50,7 +50,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <p className="catalog-eyebrow">{view.styleLabel} · В наличии</p>
           <h1>{view.title}</h1>
           <p className="product-detail__price">{formatPrice(view.price)}</p>
-          <p className="product-detail__lead">{view.description}</p>
           <AddToCartButton product={view} className="product-detail__add" />
           <CheckoutNowButton product={view} className="product-detail__contact product-detail__contact--secondary" />
           <p className="product-detail__reply">Вы сможете выбрать доставку СДЭК и оплатить заказ через ЮKassa.</p>

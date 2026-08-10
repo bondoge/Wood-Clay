@@ -61,6 +61,7 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const cityInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<YmapsApi | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -73,6 +74,14 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
     setError(null);
     setCityQuery("");
     setOffices(null);
+    // "Изменить" replaces the summary card with a search field of the same
+    // rough size/position — without an explicit scroll, that swap can be
+    // easy to miss (autoFocus alone doesn't reliably scroll in every
+    // browser), which read as the button "doing nothing".
+    requestAnimationFrame(() => {
+      cityInputRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      cityInputRef.current?.focus();
+    });
   }
 
   async function loadOffices(city: string) {
@@ -180,11 +189,11 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
               (the browser silently mangles them, breaking submission). */}
           <div className="cdek-city-search">
             <input
+              ref={cityInputRef}
               type="text"
               placeholder="Введите город доставки"
               value={cityQuery}
               onChange={(e) => handleCityInputChange(e.target.value)}
-              autoFocus={isEditing && !!value}
             />
             {suggestLoading && <p className="cdek-picker__status">Ищем город…</p>}
             {suggestions && suggestions.length > 0 && (

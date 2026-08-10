@@ -1,6 +1,13 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Build-arg, not "environment:" below — NEXT_PUBLIC_* is inlined
+        # into the client bundle by `next build`, so it has to be present
+        # during the image build, not just at container runtime. See the
+        # Dockerfile comment at this ARG for why .env alone can't supply it.
+        NEXT_PUBLIC_YANDEX_MAPS_API_KEY: ${NEXT_PUBLIC_YANDEX_MAPS_API_KEY}
     image: woodandclay:latest
     container_name: woodandclay
     restart: unless-stopped

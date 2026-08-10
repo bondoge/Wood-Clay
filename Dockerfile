@@ -10,6 +10,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_* vars are inlined into the client bundle at build time, not
+# read at runtime — .env is excluded from the build context (.dockerignore),
+# so this has to come in as a build arg (see docker-compose.yml's app.build.args),
+# sourced from the server's real .env, unlike the PGHOST placeholders below.
+ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY
+ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 # Build-time-only placeholder: catalog pages are force-dynamic (never
 # statically generated), but Next still imports the route module during
 # `next build` to read its config, and db/client.ts throws immediately if

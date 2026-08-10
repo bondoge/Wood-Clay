@@ -234,7 +234,7 @@
 @media (max-width: 960px) {
   .account-hero { grid-template-columns: minmax(0,1fr) 240px; gap: 35px; }
   .account-shell { grid-template-columns: 1fr; }
-  .account-sidebar { position: static; }
+  .account-sidebar { position: static; min-width: 0; }
   .account-sidebar__identity, .account-sidebar__help { display: none; }
   .account-sidebar nav { padding: 0 0 11px; display: flex; overflow-x: auto; border: 0; scrollbar-width: none; }
   .account-sidebar nav::-webkit-scrollbar { display: none; }

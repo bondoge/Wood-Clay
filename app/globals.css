@@ -2301,7 +2301,12 @@ button:focus-visible {
     font-size: 11px;
   }
 
-  .site-header__actions a:last-child {
+  /* > and :last-of-type, not the bare descendant :last-child this used to
+     be — that matched any <a> anywhere inside (e.g. the mini-cart panel's
+     "Открыть корзину" link, several levels down) as long as it was the
+     last child of its own immediate parent, hiding it too. Scoped to only
+     the direct-child nav links, this hides just "Создать аккаунт". */
+  .site-header__actions > a:last-of-type {
     display: none;
   }
 

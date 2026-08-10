@@ -2138,22 +2138,18 @@
 .cdek-modal__panel { width: min(880px, 100%); position: relative; padding: 20px; border-radius: 22px; background: #fff; }
 .cdek-modal__close { width: 34px; height: 34px; position: absolute; top: 14px; right: 14px; z-index: 1; display: grid; place-items: center; border: 0; border-radius: 10px; color: #6e746d; background: rgba(37,48,39,.08); cursor: pointer; font-size: 13px; }
 .cdek-modal__close:hover { background: rgba(37,48,39,.14); }
-.cdek-modal__body { width: 100%; height: min(70vh, 600px); min-height: 420px; padding: 6px 4px 4px; overflow-y: auto; }
+.cdek-modal__head { width: 100%; padding: 0 4px; }
+.cdek-modal__body { width: 100%; max-height: min(78vh, 640px); padding: 14px 4px 4px; overflow-y: auto; }
 .cdek-modal__title { margin: 0 0 16px; font-size: 16px; font-weight: 620; color: #2a312a; }
 .cdek-modal__status { margin: 12px 0 0; color: #6e746d; font-size: 10px; }
-.cdek-modal__back { margin: 0 0 14px; padding: 0; border: 0; color: #6e746d; background: transparent; cursor: pointer; font-size: 10px; text-decoration: underline; text-underline-offset: 3px; }
 
-.cdek-city-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.cdek-city-grid button { height: 44px; padding: 0 10px; border: 1px solid rgba(37,48,39,.12); border-radius: 12px; color: #3b423b; background: rgba(255,255,255,.6); cursor: pointer; font-size: 11px; font-weight: 560; transition: border-color 160ms ease, background 160ms ease; }
-.cdek-city-grid button:hover { border-color: rgba(55,76,57,.38); background: #fff; }
-
-.cdek-city-search { margin-top: 18px; }
+.cdek-city-search { position: relative; margin: 0 0 18px; }
 .cdek-city-search input { width: 100%; height: 46px; padding: 0 14px; border: 1px solid rgba(37,48,39,.12); border-radius: 12px; color: #2a312a; background: rgba(255,255,255,.6); font-size: 12px; }
 .cdek-city-search input:focus-visible { outline: 2px solid #354936; outline-offset: 1px; }
 
-.cdek-city-matches { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.cdek-city-matches button { width: 100%; padding: 12px 14px; border: 1px solid rgba(37,48,39,.12); border-radius: 12px; color: #2a312a; background: rgba(255,255,255,.6); cursor: pointer; font-size: 11px; text-align: left; }
-.cdek-city-matches button:hover { border-color: rgba(55,76,57,.38); background: #fff; }
+.cdek-city-matches { width: 100%; margin: 6px 0 0; padding: 6px; position: absolute; top: 100%; left: 0; z-index: 2; max-height: 260px; overflow-y: auto; list-style: none; display: grid; gap: 4px; border: 1px solid rgba(37,48,39,.12); border-radius: 12px; background: #fff; }
+.cdek-city-matches button { width: 100%; padding: 10px 12px; border: 0; border-radius: 9px; color: #2a312a; background: transparent; cursor: pointer; font-size: 11px; text-align: left; }
+.cdek-city-matches button:hover { background: rgba(37,48,39,.06); }
 
 .cdek-offices-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .cdek-offices-map { height: 340px; border-radius: 14px; overflow: hidden; background: #e9e7e1; }
@@ -2198,9 +2194,9 @@
 
   .cdek-picker__summary { flex-direction: column; align-items: stretch; gap: 10px; }
   .cdek-modal { padding: 0; }
-  .cdek-modal__panel { width: 100%; height: 100%; border-radius: 0; padding: 14px; }
-  .cdek-modal__body { height: calc(100% - 40px); min-height: 0; }
-  .cdek-city-grid { grid-template-columns: repeat(2, 1fr); }
+  .cdek-modal__panel { width: 100%; height: 100%; border-radius: 0; padding: 14px; display: flex; flex-direction: column; }
+  .cdek-modal__head { flex-shrink: 0; }
+  .cdek-modal__body { flex: 1; max-height: none; min-height: 0; }
   .cdek-offices-layout { grid-template-columns: 1fr; }
   .cdek-offices-map { height: 220px; }
   .cdek-office-list { max-height: none; }

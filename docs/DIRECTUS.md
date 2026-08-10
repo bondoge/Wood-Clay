@@ -63,7 +63,7 @@ either way.
 
 ## Extensions
 
-Two custom extensions (built locally, `dist/` is git-ignored — `directus-admin`
+Four custom extensions (built locally, `dist/` is git-ignored — `directus-admin`
 has no git remote either, so nothing here reaches the server via `git pull`)
 plus one marketplace extension are deployed by copying the runtime files
 directly into `/opt/woodclay-directus-extensions/` on the server, which is
@@ -72,7 +72,9 @@ mounted read-only to `/directus/extensions` in the container:
 | Extension | Type | What it needs on the server |
 |---|---|---|
 | `first-image-thumbnail` | display | `package.json` + `dist/` |
-| `source-images-gallery` | interface | `package.json` + `dist/` |
+| `source-images-gallery` | interface | `package.json` + `dist/` — read-only viewer, used on `wb_images` |
+| `own-images-gallery` | interface | `package.json` + `dist/` — editable, used on `own_images` only; drag a file onto a thumbnail to replace it, or below the grid to add one |
+| `own-image-upload` | endpoint | `package.json` + `dist/` — server-side S3 PUT the interface above calls, mounted at `POST /own-image-upload`. Needs `S3_ENDPOINT`/`S3_BUCKET`/`S3_ACCESS_KEY`/`S3_SECRET_KEY`/`S3_REGION`/`S3_PUBLIC_BASE_URL` on the `directus` service (docker-compose.yml) — same bucket/credentials catalog-seed uses. Uploads into the product's existing folder (`products/{wb_account}/{wb_article}/`), filename prefixed `own-` so it can't collide with catalog-seed's own numbered files there. Admin-only (`accountability.admin`); does not touch the database itself — the interface writes the returned URL into the field on save, same as any other edit. |
 | `directus-extension-super-table` | layout | `package.json` + `index.js` (self-contained, no `node_modules`) |
 
 None need `src/`, `node_modules/`, or `tsconfig.json` at runtime. Restart the

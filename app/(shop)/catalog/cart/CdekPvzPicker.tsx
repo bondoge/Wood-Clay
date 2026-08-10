@@ -1,66 +1,93 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type CdekPvz = { code: string; city: string; address: string; name: string; workTime: string };
 
-type CityMatch = { code: number; city: string; region: string };
-type Office = { code: string; name: string; address: string; city: string; workTime: string };
+type CitySuggestion = { name: string; label: string };
+type Office = { code: string; name: string; address: string; city: string; workTime: string; lon: number; lat: number };
+type Step = "city" | "offices";
 
-// СДЭК's own city lookup only matches on the exact name (no substring/
-// prefix search — confirmed against their API), so live type-ahead across
-// all ~20 000 Russian localities isn't workable without caching that whole
-// list. This curated shortlist covers where most orders actually come from;
-// anything else goes through the exact-name search below.
-// Codes verified directly against СДЭК's /location/cities — don't guess
-// these, several major cities collide with same-named small settlements in
-// other regions (e.g. "Казань", "Самара", "Уфа" each returned 2-5 matches).
-const POPULAR_CITIES: CityMatch[] = [
-  { code: 44, city: "Москва", region: "Москва" },
-  { code: 137, city: "Санкт-Петербург", region: "Санкт-Петербург" },
-  { code: 270, city: "Новосибирск", region: "Новосибирская область" },
-  { code: 250, city: "Екатеринбург", region: "Свердловская область" },
-  { code: 414, city: "Нижний Новгород", region: "Нижегородская область" },
-  { code: 424, city: "Казань", region: "Татарстан" },
-  { code: 259, city: "Челябинск", region: "Челябинская область" },
-  { code: 278, city: "Красноярск", region: "Красноярский край" },
-  { code: 430, city: "Самара", region: "Самарская область" },
-  { code: 256, city: "Уфа", region: "Республика Башкортостан" },
-  { code: 438, city: "Ростов-на-Дону", region: "Ростовская область" },
-  { code: 268, city: "Омск", region: "Омская область" },
-  { code: 435, city: "Краснодар", region: "Краснодарский край" },
-  { code: 506, city: "Воронеж", region: "Воронежская область" },
-  { code: 248, city: "Пермь", region: "Пермский край" },
-  { code: 426, city: "Волгоград", region: "Волгоградская область" },
+// Hand-built picker: DaData (app/api/dadata/suggest-cities) resolves fuzzy
+// city input to an exact name — СДЭК's own /location/cities only matches
+// exact names — and a real Yandex map (JS API v2.1, plain <script> tag, no
+// npm dependency) plots pins from coordinates СДЭК's own /deliverypoints
+// already returns, so no geocoding call is ever made client-side.
+//
+// This isn't CDEK's official @cdek-it/widget: that package hard-requires a
+// *separately paid* Yandex HTTP Geocoder license (confirmed via its bundled
+// source and a live 403 "Invalid api key" against a correctly-configured
+// key — Yandex split Geocoder from the JS API into its own commercial
+// product in May 2026). The JS API used here for map *display* only is
+// still free under standard conditions, and we never call ymaps.geocode()
+// or a Suggest control, which is the part that would hit that paywall.
+const POPULAR_CITIES = [
+  "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург",
+  "Нижний Новгород", "Казань", "Челябинск", "Красноярск",
+  "Самара", "Уфа", "Ростов-на-Дону", "Омск",
+  "Краснодар", "Воронеж", "Пермь", "Волгоград",
 ];
 
-type Step = "city" | "offices";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- no official types package for the plain JS API v2.1; not worth a new dependency for this small a surface.
+type YmapsApi = any;
+
+declare global {
+  interface Window {
+    ymaps?: YmapsApi;
+  }
+}
+
+let ymapsPromise: Promise<YmapsApi> | null = null;
+function loadYmaps(apiKey: string): Promise<YmapsApi> {
+  if (window.ymaps) return Promise.resolve(window.ymaps);
+  if (ymapsPromise) return ymapsPromise;
+  ymapsPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU`;
+    script.async = true;
+    script.onload = () => window.ymaps!.ready(() => resolve(window.ymaps!));
+    script.onerror = () => reject(new Error("Failed to load Yandex Maps"));
+    document.head.appendChild(script);
+  });
+  return ymapsPromise;
+}
 
 export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | null; onChange: (pvz: CdekPvz) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<Step>("city");
   const [cityQuery, setCityQuery] = useState("");
-  const [cityMatches, setCityMatches] = useState<CityMatch[] | null>(null);
-  const [selectedCity, setSelectedCity] = useState<CityMatch | null>(null);
+  const [suggestions, setSuggestions] = useState<CitySuggestion[] | null>(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [offices, setOffices] = useState<Office[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [highlightedCode, setHighlightedCode] = useState<string | null>(null);
+
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<YmapsApi | null>(null);
+  const listItemRefs = useRef(new Map<string, HTMLButtonElement>());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   function handleOpen() {
     setIsOpen(true);
     setStep("city");
-    setCityMatches(null);
+    setSuggestions(null);
+    setCityQuery("");
     setError(null);
   }
 
-  async function loadOffices(city: CityMatch) {
+  async function loadOffices(city: string) {
     setSelectedCity(city);
     setStep("offices");
     setOffices(null);
+    setHighlightedCode(null);
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch(`/api/cdek/offices?city_code=${city.code}`);
+      const res = await fetch(`/api/cdek/offices?city=${encodeURIComponent(city)}`);
       if (!res.ok) throw new Error();
       const data: Office[] = await res.json();
       if (data.length === 0) {
@@ -75,35 +102,72 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
     }
   }
 
-  async function handleCitySearch() {
-    const query = cityQuery.trim();
-    if (!query) return;
-    setLoading(true);
-    setError(null);
-    setCityMatches(null);
-    try {
-      const res = await fetch(`/api/cdek/cities?city=${encodeURIComponent(query)}`);
-      if (!res.ok) throw new Error();
-      const data: CityMatch[] = await res.json();
-      if (data.length === 0) {
-        setError("Город не найден. Проверьте написание — нужно точное название, например «Ижевск».");
-      } else if (data.length === 1) {
-        await loadOffices(data[0]);
-        return;
-      } else {
-        setCityMatches(data);
+  function handleCityInputChange(input: string) {
+    setCityQuery(input);
+    setSuggestions(null);
+    clearTimeout(debounceRef.current);
+    const query = input.trim();
+    if (query.length < 2) return;
+    debounceRef.current = setTimeout(async () => {
+      setSuggestLoading(true);
+      try {
+        const res = await fetch(`/api/dadata/suggest-cities?query=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error();
+        setSuggestions(await res.json());
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSuggestLoading(false);
       }
-    } catch {
-      setError("Не получилось найти город. Попробуйте ещё раз.");
-    } finally {
-      setLoading(false);
-    }
+    }, 300);
   }
 
   function handleSelectOffice(office: Office) {
     onChange({ code: office.code, city: office.city, address: office.address, name: office.name, workTime: office.workTime });
     setIsOpen(false);
   }
+
+  useEffect(() => {
+    if (step !== "offices" || !offices || offices.length === 0) return;
+    const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY;
+    if (!apiKey || !mapContainerRef.current) return;
+
+    let cancelled = false;
+    loadYmaps(apiKey)
+      .then((ymaps) => {
+        if (cancelled || !mapContainerRef.current) return;
+        const map = new ymaps.Map(
+          mapContainerRef.current,
+          { center: [offices[0].lat, offices[0].lon], zoom: 11, controls: ["zoomControl"] },
+          { suppressMapOpenBlock: true },
+        );
+        mapInstanceRef.current = map;
+
+        offices.forEach((office) => {
+          const placemark = new ymaps.Placemark(
+            [office.lat, office.lon],
+            { balloonContentHeader: office.name, balloonContentBody: office.address },
+            { preset: "islands#greenDotIcon" },
+          );
+          placemark.events.add("click", () => {
+            setHighlightedCode(office.code);
+            listItemRefs.current.get(office.code)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          });
+          map.geoObjects.add(placemark);
+        });
+
+        if (offices.length > 1) {
+          map.setBounds(map.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 24 });
+        }
+      })
+      .catch((err) => console.error("Failed to load Yandex Maps:", err));
+
+    return () => {
+      cancelled = true;
+      mapInstanceRef.current?.destroy();
+      mapInstanceRef.current = null;
+    };
+  }, [step, offices]);
 
   return (
     <div className="cdek-picker">
@@ -134,8 +198,8 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
               <h3 className="cdek-modal__title">Выберите город</h3>
               <div className="cdek-city-grid">
                 {POPULAR_CITIES.map((city) => (
-                  <button type="button" key={city.code} onClick={() => loadOffices(city)}>
-                    {city.city}
+                  <button type="button" key={city} onClick={() => loadOffices(city)}>
+                    {city}
                   </button>
                 ))}
               </div>
@@ -146,23 +210,23 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
               <div className="cdek-city-search">
                 <input
                   type="text"
-                  placeholder="Другой город — точное название"
+                  placeholder="Другой город"
                   value={cityQuery}
-                  onChange={(e) => setCityQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleCitySearch(); }}
+                  onChange={(e) => handleCityInputChange(e.target.value)}
                 />
-                <button type="button" onClick={handleCitySearch}>Найти</button>
               </div>
 
-              {loading && <p className="cdek-modal__status">Ищем город…</p>}
-              {error && <p className="cdek-picker__error" role="alert">{error}</p>}
+              {suggestLoading && <p className="cdek-modal__status">Ищем город…</p>}
+              {suggestions?.length === 0 && !suggestLoading && (
+                <p className="cdek-picker__error" role="alert">Город не найден.</p>
+              )}
 
-              {cityMatches && (
+              {suggestions && suggestions.length > 0 && (
                 <ul className="cdek-city-matches">
-                  {cityMatches.map((city) => (
-                    <li key={city.code}>
-                      <button type="button" onClick={() => loadOffices(city)}>
-                        {city.city} <span>{city.region}</span>
+                  {suggestions.map((city) => (
+                    <li key={city.name}>
+                      <button type="button" onClick={() => loadOffices(city.name)}>
+                        {city.label}
                       </button>
                     </li>
                   ))}
@@ -172,27 +236,37 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
           )}
 
           {step === "offices" && (
-            <div className="cdek-modal__body">
+            <div className="cdek-modal__body cdek-modal__body--offices">
               <button type="button" className="cdek-modal__back" onClick={() => setStep("city")}>
                 ← Другой город
               </button>
-              <h3 className="cdek-modal__title">{selectedCity?.city}</h3>
+              <h3 className="cdek-modal__title">{selectedCity}</h3>
 
               {loading && <p className="cdek-modal__status">Загружаем пункты выдачи…</p>}
               {error && <p className="cdek-picker__error" role="alert">{error}</p>}
 
               {offices && offices.length > 0 && (
-                <ul className="cdek-office-list">
-                  {offices.map((office) => (
-                    <li key={office.code}>
-                      <button type="button" onClick={() => handleSelectOffice(office)}>
-                        <strong>{office.name}</strong>
-                        <span>{office.address}</span>
-                        {office.workTime && <small>{office.workTime}</small>}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <div className="cdek-offices-layout">
+                  <div className="cdek-offices-map" ref={mapContainerRef} aria-hidden="true" />
+                  <ul className="cdek-office-list">
+                    {offices.map((office) => (
+                      <li key={office.code}>
+                        <button
+                          type="button"
+                          ref={(el) => {
+                            if (el) listItemRefs.current.set(office.code, el);
+                          }}
+                          className={office.code === highlightedCode ? "is-highlighted" : undefined}
+                          onClick={() => handleSelectOffice(office)}
+                        >
+                          <strong>{office.name}</strong>
+                          <span>{office.address}</span>
+                          {office.workTime && <small>{office.workTime}</small>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           )}

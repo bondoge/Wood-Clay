@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { masterSelectSchema, productSelectSchema, workshopSelectSchema } from "./validators";
+import { productSelectSchema } from "./validators";
 
 function omit<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K> {
   const copy = { ...obj };
@@ -7,34 +7,13 @@ function omit<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K> {
   return copy;
 }
 
-const validWorkshop = {
-  id: 1,
-  slug: "gzhel-atelye",
-  name: "Мастерская «Гжельский фарфор»",
-  kind: "own" as const,
-  style: "gzhel" as const,
-  location: "посёлок Гжель",
-  foundedYear: 1998,
-  story: "Собственная мастерская дома, работает с 1998 года.",
-  photoAlt: null,
-};
-
-const validMaster = {
-  id: 1,
-  slug: "irina-k",
-  name: "Ирина К.",
-  workshopId: 1,
-  bio: "Расписывает фарфор больше пятнадцати лет.",
-  photoAlt: null,
-};
-
 const validProduct = {
   id: 1,
   wbArticle: "123456789",
   wbAccount: 1,
-  sourceTitle: "Ёлочная игрушка Гжель",
-  sourceDescription: "Ёлочная игрушка, роспись гжель.",
-  sourceImages: ["/import/123456789/1.jpg"],
+  wbTitle: "Ёлочная игрушка Гжель",
+  wbDescription: "Ёлочная игрушка, роспись гжель.",
+  wbImages: ["/import/123456789/1.jpg"],
   productType: "Ёлочная игрушка",
   importedAt: new Date(),
   slug: "elochnaya-igrushka-gzhel",
@@ -42,42 +21,12 @@ const validProduct = {
   stock: 12,
   style: "gzhel" as const,
   styleConfidence: 0.92,
-  styleReviewed: true,
   published: true,
-  isFlagship: false,
   sortOrder: 0,
-  ownImages: null,
-  ownTitle: null,
-  ownStory: null,
-  workshopId: 1,
-  masterId: 1,
+  ownImages: ["/import/123456789/1.jpg"],
+  ownTitle: "Ёлочная игрушка Гжель",
+  ownDescription: "Ёлочная игрушка, роспись гжель.",
 };
-
-describe("workshopSelectSchema", () => {
-  it("accepts a valid workshop", () => {
-    expect(workshopSelectSchema.safeParse(validWorkshop).success).toBe(true);
-  });
-
-  it("rejects a missing required field", () => {
-    expect(workshopSelectSchema.safeParse(omit(validWorkshop, "story")).success).toBe(false);
-  });
-
-  it("rejects an invalid kind enum value", () => {
-    expect(workshopSelectSchema.safeParse({ ...validWorkshop, kind: "franchise" }).success).toBe(
-      false,
-    );
-  });
-});
-
-describe("masterSelectSchema", () => {
-  it("accepts a valid master", () => {
-    expect(masterSelectSchema.safeParse(validMaster).success).toBe(true);
-  });
-
-  it("rejects a missing workshopId", () => {
-    expect(masterSelectSchema.safeParse(omit(validMaster, "workshopId")).success).toBe(false);
-  });
-});
 
 describe("productSelectSchema", () => {
   it("accepts a valid product", () => {
@@ -90,9 +39,9 @@ describe("productSelectSchema", () => {
     );
   });
 
-  it("rejects a non-array sourceImages", () => {
+  it("rejects a non-array wbImages", () => {
     expect(
-      productSelectSchema.safeParse({ ...validProduct, sourceImages: "not-an-array" }).success,
+      productSelectSchema.safeParse({ ...validProduct, wbImages: "not-an-array" }).success,
     ).toBe(false);
   });
 

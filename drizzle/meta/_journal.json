@@ -43,6 +43,20 @@
       "when": 1786204511465,
       "tag": "0005_fluffy_scarecrow",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786372049681,
+      "tag": "0006_legal_joshua_kane",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786373442727,
+      "tag": "0007_polite_tinkerer",
+      "breakpoints": true
     }
   ]
 }

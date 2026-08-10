@@ -92,7 +92,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
         orderLines.push({
           productId: product.id,
-          title: product.ownTitle ?? product.sourceTitle,
+          title: product.ownTitle,
           slug: product.slug,
           priceRub: product.priceRub,
           quantity: item.quantity,

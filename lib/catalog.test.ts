@@ -1,7 +1,7 @@
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
-import { masters, products, workshops } from "@/db/schema";
+import { products } from "@/db/schema";
 
 // Everything the mock needs is self-contained inside the factory (vitest
 // hoists vi.mock calls above regular imports, so outer-scope variables
@@ -16,41 +16,19 @@ vi.mock("@/db/client", async () => {
   return { db: drizzle(client, { schema }) };
 });
 
-const { listPublished, byStyle, flagships, bySlug } = await import("./catalog");
+const { listPublished, byStyle, bySlug } = await import("./catalog");
 
 beforeAll(async () => {
   await migrate(db, { migrationsFolder: "./drizzle" });
 
-  const [workshop] = await db
-    .insert(workshops)
-    .values({
-      slug: "gzhel-atelye",
-      name: "Мастерская «Гжельский фарфор»",
-      kind: "own",
-      style: "gzhel",
-      location: "посёлок Гжель",
-      story: "Собственная мастерская дома.",
-    })
-    .returning();
-
-  const [master] = await db
-    .insert(masters)
-    .values({
-      slug: "irina-k",
-      name: "Ирина К.",
-      workshopId: workshop.id,
-      bio: "Расписывает фарфор больше пятнадцати лет.",
-    })
-    .returning();
-
   const baseProduct = {
-    sourceImages: [] as string[],
+    wbImages: [] as string[],
+    ownImages: [] as string[],
+    ownDescription: "Описание",
     productType: "Ёлочная игрушка",
     importedAt: new Date(),
     priceRub: 1000,
     stock: 5,
-    workshopId: workshop.id,
-    masterId: master.id,
   };
 
   await db.insert(products).values([
@@ -58,36 +36,36 @@ beforeAll(async () => {
       ...baseProduct,
       wbArticle: "1",
       wbAccount: 1,
-      sourceTitle: "Игрушка гжель",
-      sourceDescription: "Описание",
+      wbTitle: "Игрушка гжель",
+      wbDescription: "Описание",
+      ownTitle: "Игрушка гжель",
       slug: "gzhel-published",
       style: "gzhel",
       published: true,
-      isFlagship: false,
       sortOrder: 2,
     },
     {
       ...baseProduct,
       wbArticle: "2",
       wbAccount: 1,
-      sourceTitle: "Игрушка хохлома, флагман",
-      sourceDescription: "Описание",
-      slug: "khokhloma-flagship",
+      wbTitle: "Игрушка хохлома",
+      wbDescription: "Описание",
+      ownTitle: "Игрушка хохлома",
+      slug: "khokhloma-published",
       style: "khokhloma",
       published: true,
-      isFlagship: true,
       sortOrder: 1,
     },
     {
       ...baseProduct,
       wbArticle: "3",
       wbAccount: 1,
-      sourceTitle: "Неопубликованная игрушка",
-      sourceDescription: "Описание",
+      wbTitle: "Неопубликованная игрушка",
+      wbDescription: "Описание",
+      ownTitle: "Неопубликованная игрушка",
       slug: "not-published",
       style: "gzhel",
       published: false,
-      isFlagship: false,
     },
     {
       ...baseProduct,
@@ -99,8 +77,9 @@ beforeAll(async () => {
       // stops a bad value from landing in the column (e.g. a WB API quirk,
       // or a row written before a style was assigned). Cast bypasses the
       // compile-time check on purpose, to simulate exactly that.
-      sourceTitle: "Битая строка",
-      sourceDescription: "Описание",
+      wbTitle: "Битая строка",
+      wbDescription: "Описание",
+      ownTitle: "Битая строка",
       slug: "malformed-row",
       style: "not-a-real-style" as unknown as (typeof products.$inferInsert)["style"],
       published: true,
@@ -127,16 +106,8 @@ describe("listPublished", () => {
 describe("byStyle", () => {
   it("filters by style and published", async () => {
     const rows = await byStyle("khokhloma");
-    expect(rows.map((p) => p.slug)).toContain("khokhloma-flagship");
+    expect(rows.map((p) => p.slug)).toContain("khokhloma-published");
     expect(rows.every((p) => p.style === "khokhloma")).toBe(true);
-  });
-});
-
-describe("flagships", () => {
-  it("returns only is_flagship rows, ordered by sortOrder", async () => {
-    const rows = await flagships();
-    expect(rows).toHaveLength(1);
-    expect(rows[0].slug).toBe("khokhloma-flagship");
   });
 });
 

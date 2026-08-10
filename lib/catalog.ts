@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ne, or } from "drizzle-orm";
+import { and, count, eq, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
 import { productSelectSchema, type Product, type Style } from "@/db/validators";
@@ -38,15 +38,6 @@ export async function byStyle(style: Style): Promise<Product[]> {
     .select()
     .from(products)
     .where(and(eq(products.published, true), eq(products.style, style)));
-  return parseRowsLenient(rows);
-}
-
-export async function flagships(): Promise<Product[]> {
-  const rows = await db
-    .select()
-    .from(products)
-    .where(and(eq(products.published, true), eq(products.isFlagship, true)))
-    .orderBy(asc(products.sortOrder));
   return parseRowsLenient(rows);
 }
 

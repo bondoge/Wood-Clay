@@ -24,9 +24,7 @@ type Office = { code: string; name: string; address: string; city: string; workT
 // Inline, not a modal — the city field is the first thing visible in this
 // checkout step, map + list appear directly beneath it once a city
 // resolves. Clicking a pin selects that point immediately, same as
-// clicking its list row — earlier versions only highlighted the row on
-// pin click and made the actual click on the list required, which tested
-// as a confusing two-step "did that work?" interaction.
+// clicking its list row.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- no official types package for the plain JS API v2.1; not worth a new dependency for this small a surface.
 type YmapsApi = any;
@@ -68,22 +66,6 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
 
   useEffect(() => () => clearTimeout(debounceRef.current), []);
 
-  function handleEdit() {
-    setIsEditing(true);
-    setSuggestions(null);
-    setError(null);
-    setCityQuery("");
-    setOffices(null);
-    // "Изменить" replaces the summary card with a search field of the same
-    // rough size/position — without an explicit scroll, that swap can be
-    // easy to miss (autoFocus alone doesn't reliably scroll in every
-    // browser), which read as the button "doing nothing".
-    requestAnimationFrame(() => {
-      cityInputRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-      cityInputRef.current?.focus();
-    });
-  }
-
   async function loadOffices(city: string) {
     setCityQuery(city);
     setSuggestions(null);
@@ -104,6 +86,26 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleEdit() {
+    setIsEditing(true);
+    setError(null);
+    // Reopen where the customer left off — same city, same map, current
+    // pickup point still marked — rather than making them search again.
+    // Only re-fetch if we somehow don't already have that city's offices
+    // (e.g. the picker was handed a value it never itself looked up).
+    if (!offices && value?.city) {
+      loadOffices(value.city);
+    }
+    // "Изменить" replaces the summary card with a search field of the same
+    // rough size/position — without an explicit scroll, that swap can be
+    // easy to miss (autoFocus alone doesn't reliably scroll in every
+    // browser), which read as the button "doing nothing".
+    requestAnimationFrame(() => {
+      cityInputRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      cityInputRef.current?.focus();
+    });
   }
 
   function handleCityInputChange(input: string) {
@@ -128,21 +130,32 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
 
   function handleSelectOffice(office: Office) {
     onChange({ code: office.code, city: office.city, address: office.address, name: office.name, workTime: office.workTime });
+    // Tear the map down here, synchronously, while its container is still
+    // mounted — the container div only exists while isEditing is true, so
+    // once we flip that below, React removes it. Leaving the map instance
+    // alive and pointed at a now-detached node until some later cleanup
+    // got around to destroy()-ing it was throwing inside the Yandex SDK on
+    // real mobile browsers (worked fine in automated desktop testing,
+    // which is why this shipped unnoticed the first time).
+    mapInstanceRef.current?.destroy();
+    mapInstanceRef.current = null;
     setIsEditing(false);
   }
 
   useEffect(() => {
-    if (!offices || offices.length === 0) return;
+    if (!isEditing || !offices || offices.length === 0) return;
     const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY;
     if (!apiKey || !mapContainerRef.current) return;
 
     let cancelled = false;
+    const current = offices.find((o) => o.code === value?.code) ?? offices[0];
+
     loadYmaps(apiKey)
       .then((ymaps) => {
         if (cancelled || !mapContainerRef.current) return;
         const map = new ymaps.Map(
           mapContainerRef.current,
-          { center: [offices[0].lat, offices[0].lon], zoom: 11, controls: ["zoomControl"] },
+          { center: [current.lat, current.lon], zoom: 11, controls: ["zoomControl"] },
           { suppressMapOpenBlock: true },
         );
         mapInstanceRef.current = map;
@@ -151,7 +164,7 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
           const placemark = new ymaps.Placemark(
             [office.lat, office.lon],
             { balloonContentHeader: office.name, balloonContentBody: office.address },
-            { preset: "islands#greenDotIcon" },
+            { preset: office.code === value?.code ? "islands#darkGreenIcon" : "islands#greenDotIcon" },
           );
           placemark.events.add("click", () => handleSelectOffice(office));
           map.geoObjects.add(placemark);
@@ -169,7 +182,7 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
       mapInstanceRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSelectOffice is stable in effect (only reads/sets state, no external deps that change its behavior per-render)
-  }, [offices]);
+  }, [offices, isEditing, value?.code]);
 
   return (
     <div className="cdek-picker">
@@ -221,7 +234,11 @@ export default function CdekPvzPicker({ value, onChange }: { value: CdekPvz | nu
               <ul className="cdek-office-list">
                 {offices.map((office) => (
                   <li key={office.code}>
-                    <button type="button" onClick={() => handleSelectOffice(office)}>
+                    <button
+                      type="button"
+                      className={office.code === value?.code ? "is-current" : undefined}
+                      onClick={() => handleSelectOffice(office)}
+                    >
                       <strong>{office.name}</strong>
                       <span>{office.address}</span>
                       {office.workTime && <small>{office.workTime}</small>}

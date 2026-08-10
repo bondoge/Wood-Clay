@@ -237,6 +237,12 @@ export const orderItems = pgTable("order_items", {
   productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
   productTitle: text("product_title").notNull(),
   productSlug: text("product_slug").notNull(),
+  // A single-element array, not a plain string — so Directus's
+  // first-image-thumbnail display (built for the products.own_images/
+  // wb_images shape) renders it in the order_items list with no new
+  // extension needed. Snapshotted at order time, same reasoning as
+  // productTitle/productSlug above.
+  productImage: jsonb("product_image").$type<string[]>(),
   priceRub: integer("price_rub").notNull(),
   quantity: integer("quantity").notNull(),
 });

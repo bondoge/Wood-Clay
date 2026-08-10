@@ -57,6 +57,13 @@
       "when": 1786373442727,
       "tag": "0007_polite_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786376287017,
+      "tag": "0008_flippant_glorian",
+      "breakpoints": true
     }
   ]
 }

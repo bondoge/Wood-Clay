@@ -11,6 +11,7 @@ export type OrderItemSummary = {
   productId: number | null;
   title: string;
   slug: string;
+  image: string[] | null;
   priceRub: number;
   quantity: number;
 };
@@ -94,6 +95,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
           productId: product.id,
           title: product.ownTitle,
           slug: product.slug,
+          image: product.ownImages[0] ? [product.ownImages[0]] : null,
           priceRub: product.priceRub,
           quantity: item.quantity,
         });
@@ -124,6 +126,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
           productId: line.productId,
           productTitle: line.title,
           productSlug: line.slug,
+          productImage: line.image,
           priceRub: line.priceRub,
           quantity: line.quantity,
         })),
@@ -151,7 +154,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 }
 
 function toItemSummary(row: typeof orderItems.$inferSelect): OrderItemSummary {
-  return { productId: row.productId, title: row.productTitle, slug: row.productSlug, priceRub: row.priceRub, quantity: row.quantity };
+  return { productId: row.productId, title: row.productTitle, slug: row.productSlug, image: row.productImage, priceRub: row.priceRub, quantity: row.quantity };
 }
 
 export async function getOrdersForUser(userId: string): Promise<OrderSummary[]> {

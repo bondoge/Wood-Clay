@@ -1,9 +1,11 @@
 "use client";
 
-import { type FormEvent, useMemo, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { CatalogFooter, CatalogHeader, ProductCard } from "./catalog-components";
+import { CollectionsBlock } from "./CollectionsBlock";
 import type { ProductView } from "./product-view";
-import { formatPrice } from "./catalog-utils";
+import { formatPrice, pluralizeProducts } from "./catalog-utils";
+import { computeCategories, computeCollectionTiles, computeStyles, matchesCategory, normalize } from "./collections";
 
 const PAGE_SIZE = 24;
 
@@ -14,31 +16,6 @@ const SORT_OPTIONS = [
   { value: "stock", label: "Больше в наличии" },
 ];
 
-const STYLE_ORDER = ["gzhel", "khokhloma", "author"];
-const STYLE_LABELS: Record<string, string> = {
-  gzhel: "Гжель",
-  khokhloma: "Хохлома",
-  author: "Авторская роспись",
-};
-const FEATURED_CATEGORY_IDS = ["olympic-bear", "jewelry", "christmas", "figurines", "year-symbol"];
-const FEATURED_CATEGORY_LABELS: Record<string, string> = {
-  "olympic-bear": "Олимпийский мишка",
-  jewelry: "Украшения",
-  christmas: "Ёлочные игрушки",
-  figurines: "Фигурки и статуэтки",
-  "year-symbol": "Символ года",
-};
-const STYLE_IMAGE_ARTICLES: Record<string, string> = {
-  gzhel: "403704180",
-  author: "497278688",
-};
-const CATEGORY_IMAGE_ARTICLES: Record<string, string> = {
-  "olympic-bear": "992127613",
-  christmas: "225626203",
-  figurines: "134756413",
-  "year-symbol": "1252955726",
-};
-const JEWELRY_COLLECTION_IMAGE = "https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/products/1/155402178/0-medium.avif";
 const SYNONYMS: Record<string, string[]> = {
   елка: ["ёлка", "елочная", "ёлочная", "новогодняя", "украшение"],
   игрушка: ["украшение", "подвес", "елочная", "ёлочная"],
@@ -50,14 +27,6 @@ const SYNONYMS: Record<string, string[]> = {
   мишка: ["медведь", "олимпийский"],
   подарок: ["сувенир", "подарочный"],
 };
-
-function normalize(value: string) {
-  return value
-    .toLocaleLowerCase("ru-RU")
-    .replaceAll("ё", "е")
-    .replace(/[^a-zа-я0-9]+/gi, " ")
-    .trim();
-}
 
 function scoreProduct(product: ProductView, rawQuery: string) {
   const query = normalize(rawQuery);
@@ -92,20 +61,16 @@ function scoreProduct(product: ProductView, rawQuery: string) {
   return everyOriginalTokenMatches ? score + 12 : score;
 }
 
-function matchesCategory(product: ProductView, categoryId: string) {
-  const title = normalize(product.title);
-  if (categoryId === "olympic-bear") return title.includes("олимпийск") && title.includes("мишк");
-  if (categoryId === "jewelry") return product.type === "Заколки-автомат";
-  if (categoryId === "christmas") return product.type === "Елочные украшения";
-  if (categoryId === "figurines") return product.type === "Фигурки и статуэтки";
-  if (categoryId === "year-symbol") return title.includes("коза");
-  return categoryId.startsWith("type:") && product.type === categoryId.slice(5);
-}
+type CatalogClientProps = {
+  products: ProductView[];
+  initialStyle?: string;
+  initialCategory?: string;
+};
 
-export default function CatalogClient({ products }: { products: ProductView[] }) {
+export default function CatalogClient({ products, initialStyle, initialCategory }: CatalogClientProps) {
   const [query, setQuery] = useState("");
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedStyles, setSelectedStyles] = useState<string[]>(initialStyle ? [initialStyle] : []);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
   const [sort, setSort] = useState("relevance");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -117,47 +82,12 @@ export default function CatalogClient({ products }: { products: ProductView[] })
   const [minPrice, setMinPrice] = useState(minCatalogPrice);
   const [maxPrice, setMaxPrice] = useState(maxCatalogPrice);
 
-  const styles = useMemo(() => STYLE_ORDER.map((style) => {
-    const fallbackProduct = products.find((item) => item.style === style);
-    const imageProduct = products.find((item) => item.article === STYLE_IMAGE_ARTICLES[style]);
-    return fallbackProduct ? {
-      style,
-      label: STYLE_LABELS[style],
-      image: imageProduct?.images[0] ?? fallbackProduct.images[0],
-      count: products.filter((item) => item.style === style).length,
-    } : null;
-  }).filter(Boolean) as { style: string; label: string; image: string; count: number }[], [products]);
-
-  const categories = useMemo(() => {
-    const counts = new Map<string, number>();
-    products.forEach((product) => counts.set(product.type, (counts.get(product.type) ?? 0) + 1));
-    const featured = FEATURED_CATEGORY_IDS.map((id) => ({
-      id,
-      label: FEATURED_CATEGORY_LABELS[id],
-      count: products.filter((product) => matchesCategory(product, id)).length,
-    }));
-    const coveredTypes = new Set(["Заколки-автомат", "Елочные украшения", "Фигурки и статуэтки"]);
-    const remaining = Array.from(counts.entries())
-      .filter(([type]) => !coveredTypes.has(type))
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, count]) => ({ id: `type:${type}`, label: type, count }));
-    return [...featured, ...remaining];
-  }, [products]);
-
-  const collectionTiles = useMemo(() => [
-    ...styles.map((style) => ({ ...style, id: style.style, kind: "style" as const })),
-    ...FEATURED_CATEGORY_IDS.map((categoryId) => {
-      const category = categories.find((item) => item.id === categoryId)!;
-      const imageProduct = products.find((item) => item.article === CATEGORY_IMAGE_ARTICLES[categoryId]);
-      return {
-        id: categoryId,
-        kind: "category" as const,
-        label: category.label,
-        count: category.count,
-        image: categoryId === "jewelry" ? JEWELRY_COLLECTION_IMAGE : imageProduct?.images[0] ?? products[0].images[0],
-      };
-    }),
-  ], [categories, products, styles]);
+  const styles = useMemo(() => computeStyles(products), [products]);
+  const categories = useMemo(() => computeCategories(products), [products]);
+  const collectionTiles = useMemo(
+    () => computeCollectionTiles(styles, categories, products),
+    [categories, products, styles],
+  );
 
   const filteredProducts = useMemo(() => {
     const scored = products
@@ -222,6 +152,15 @@ export default function CatalogClient({ products }: { products: ProductView[] })
     scrollToCatalog();
   };
 
+  // Links from outside the catalog (e.g. the home page's collections
+  // block) land here as /catalog?style=X or /catalog?category=X — the
+  // matching filter is already preselected via initialStyle/initialCategory,
+  // so just jump straight to the results once on load.
+  useEffect(() => {
+    if (initialStyle || initialCategory) scrollToCatalog();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <main className="catalog-page">
       <CatalogHeader />
@@ -236,35 +175,12 @@ export default function CatalogClient({ products }: { products: ProductView[] })
         </p>
       </section>
 
-      <section className="catalog-collections" aria-labelledby="collections-heading">
-        <div className="catalog-section-heading">
-          <p className="catalog-eyebrow">Коллекции</p>
-          <h2 id="collections-heading">Найдите свою коллекцию</h2>
-          <p className="catalog-section-heading__hint">Выберите роспись или тему — мы сразу покажем подходящие изделия ниже.</p>
-        </div>
-        <div className="catalog-collection-grid">
-          {collectionTiles.map(({ id, kind, label, image, count }) => {
-            const isSelected = kind === "style" ? selectedStyles.includes(id) : selectedCategories.includes(id);
-            return (
-              <button
-                className={`collection-tile${isSelected ? " is-selected" : ""}`}
-                key={`${kind}:${id}`}
-                type="button"
-                aria-pressed={isSelected}
-                onClick={() => selectCollection(kind, id)}
-              >
-                <img src={image} alt="" width="520" height="390" loading="eager" />
-                <span className="collection-tile__veil" />
-                <span className="collection-tile__label">
-                  <small>{count} {pluralizeProducts(count)}</small>
-                  {label}
-                  <em>Смотреть товары <span aria-hidden="true">↓</span></em>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      <CollectionsBlock
+        tiles={collectionTiles}
+        selectedStyles={selectedStyles}
+        selectedCategories={selectedCategories}
+        onSelect={selectCollection}
+      />
 
       <section className="catalog-shop" id="catalog-products" ref={catalogRef} aria-labelledby="catalog-products-heading">
         <form className="catalog-search-panel" role="search" onSubmit={handleSearchSubmit}>
@@ -454,13 +370,4 @@ function FilterGroup({ title, children }: { title: string; children: React.React
       {children}
     </fieldset>
   );
-}
-
-function pluralizeProducts(count: number) {
-  const mod100 = count % 100;
-  const mod10 = count % 10;
-  if (mod100 >= 11 && mod100 <= 19) return "изделий";
-  if (mod10 === 1) return "изделие";
-  if (mod10 >= 2 && mod10 <= 4) return "изделия";
-  return "изделий";
 }

@@ -14,7 +14,14 @@ export const metadata: Metadata = {
 // the catalogue.
 export const dynamic = "force-dynamic";
 
-export default async function CatalogPage() {
-  const products = (await listPublished()).map(toProductView);
-  return <CatalogClient products={products} />;
+type CatalogPageProps = {
+  searchParams: Promise<{ style?: string; category?: string }>;
+};
+
+export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+  const [products, { style, category }] = await Promise.all([
+    listPublished().then((rows) => rows.map(toProductView)),
+    searchParams,
+  ]);
+  return <CatalogClient products={products} initialStyle={style} initialCategory={category} />;
 }

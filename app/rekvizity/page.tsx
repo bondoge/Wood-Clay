@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { COMPANY } from "@/lib/company";
+import { CookieSettingsLink } from "@/components/analytics/CookieSettingsLink";
 import "../legal.css";
 
 export const metadata: Metadata = {
@@ -66,7 +67,10 @@ export default function RekvizityPage() {
       <footer className="legal-footer">
         <span>© 2026 Wood&amp;Clay</span>
         <Link href="/">Вернуться на главную</Link>
-        <a href={`mailto:${COMPANY.supportEmail}`}>{COMPANY.supportEmail}</a>
+        <span className="legal-footer__end">
+          <a href={`mailto:${COMPANY.supportEmail}`}>{COMPANY.supportEmail}</a>
+          <CookieSettingsLink />
+        </span>
       </footer>
     </main>
   );

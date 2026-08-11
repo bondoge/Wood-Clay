@@ -16,6 +16,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # sourced from the server's real .env, unlike the PGHOST placeholders below.
 ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
+ARG NEXT_PUBLIC_YANDEX_METRIKA_ID
+ENV NEXT_PUBLIC_YANDEX_METRIKA_ID=$NEXT_PUBLIC_YANDEX_METRIKA_ID
 # Build-time-only placeholder: catalog pages are force-dynamic (never
 # statically generated), but Next still imports the route module during
 # `next build` to read its config, and db/client.ts throws immediately if

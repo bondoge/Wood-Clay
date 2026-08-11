@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AddToCartButton from "./AddToCartButton";
 import { useCart } from "./CartContext";
+import { CookieSettingsLink } from "@/components/analytics/CookieSettingsLink";
 import type { ProductView } from "./product-view";
 import { formatPrice } from "./catalog-utils";
 
@@ -236,7 +237,10 @@ export function CatalogFooter() {
         <div className="site-footer__meta">
           <span>© 2026 Wood&Clay</span>
           <span>Сделано вручную в России</span>
-          <Link href="/privacy">Политика конфиденциальности</Link>
+          <span className="site-footer__meta-end">
+            <Link href="/privacy">Политика конфиденциальности</Link>
+            <CookieSettingsLink />
+          </span>
         </div>
       </div>
 

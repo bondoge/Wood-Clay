@@ -8,6 +8,7 @@ services:
         # during the image build, not just at container runtime. See the
         # Dockerfile comment at this ARG for why .env alone can't supply it.
         NEXT_PUBLIC_YANDEX_MAPS_API_KEY: ${NEXT_PUBLIC_YANDEX_MAPS_API_KEY}
+        NEXT_PUBLIC_YANDEX_METRIKA_ID: ${NEXT_PUBLIC_YANDEX_METRIKA_ID}
     image: woodandclay:latest
     container_name: woodandclay
     restart: unless-stopped

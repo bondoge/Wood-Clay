@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { COMPANY } from "@/lib/company";
+import { CookieSettingsLink } from "@/components/analytics/CookieSettingsLink";
 import "../legal.css";
 
 export const metadata: Metadata = {
@@ -92,6 +93,7 @@ const sections = [
     content: (
       <>
         <p>Сайт может использовать технические cookie и локальное хранилище браузера для сохранения корзины, настроек и корректной работы интерфейса. Эти технологии не используются для продажи персональных данных.</p>
+        <p>С вашего согласия сайт также использует аналитические cookie сервиса Яндекс.Метрика — они помогают понять, как посетители пользуются сайтом, и улучшить его работу. Аналитика запускается только после согласия в баннере cookie при первом посещении; изменить решение можно в любой момент по ссылке «Настройки cookie» в подвале сайта.</p>
         <p>Политика может обновляться при изменении сайта, процессов или законодательства. Актуальная версия всегда размещается на этой странице.</p>
       </>
     ),
@@ -136,7 +138,10 @@ export default function PrivacyPage() {
       <footer className="legal-footer">
         <span>© 2026 Wood&amp;Clay</span>
         <Link href="/">Вернуться на главную</Link>
-        <a href="mailto:woodandclay.help@mail.ru">woodandclay.help@mail.ru</a>
+        <span className="legal-footer__end">
+          <a href="mailto:woodandclay.help@mail.ru">woodandclay.help@mail.ru</a>
+          <CookieSettingsLink />
+        </span>
       </footer>
     </main>
   );

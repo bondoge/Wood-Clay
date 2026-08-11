@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { CollectionsBlock } from "./(shop)/catalog/CollectionsBlock";
 import { HeaderAccountActions } from "./(shop)/catalog/catalog-components";
 import type { CollectionTile } from "./(shop)/catalog/collections";
+import { CookieSettingsLink } from "@/components/analytics/CookieSettingsLink";
 
 const BASE_URL =
   "https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/reviews/";
@@ -810,7 +811,10 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
         <div className="site-footer__meta">
           <span>© 2026 Wood&Clay</span>
           <span>Сделано вручную в России</span>
-          <a href="/privacy">Политика конфиденциальности</a>
+          <span className="site-footer__meta-end">
+            <a href="/privacy">Политика конфиденциальности</a>
+            <CookieSettingsLink />
+          </span>
         </div>
       </div>
 

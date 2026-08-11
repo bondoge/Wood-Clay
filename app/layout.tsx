@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ConsentBanner } from "@/components/analytics/ConsentBanner";
+import { YandexMetrika } from "@/components/analytics/YandexMetrika";
 
 export const metadata: Metadata = {
   title: "Wood&Clay — фарфоровые изделия ручной работы",
@@ -22,7 +24,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        <ConsentBanner />
+        <YandexMetrika />
+      </body>
     </html>
   );
 }

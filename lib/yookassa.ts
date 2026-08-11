@@ -6,6 +6,11 @@
 
 const YOOKASSA_API_BASE = "https://api.yookassa.ru/v3";
 
+// ИП Лопатин Никита Тэйтович is on УСН "Доходы" (6%), no VAT — every
+// receipt item is vat_code 1 ("без НДС"). Confirmed with the owner
+// 2026-08-11; see lib/company.ts for the rest of the legal-entity detail.
+const RECEIPT_VAT_CODE = 1;
+
 function authHeader(): string {
   const shopId = process.env.YUKASSA_SHOP_ID;
   const secretKey = process.env.YUKASSA_SECRET_KEY;
@@ -38,9 +43,47 @@ export type CreatePaymentInput = {
   orderId: number;
   returnUrl: string;
   idempotenceKey: string;
+  // Receipt data (54-ФЗ) — required on a self-built site so ЮKassa's cloud
+  // kassa can fiscalize the sale. customerEmail is where ЮKassa sends the
+  // receipt itself.
+  customerEmail: string;
+  items: { description: string; quantity: number; priceRub: number }[];
+  shippingCostRub: number;
 };
 
+type YookassaReceiptItem = {
+  description: string;
+  quantity: number;
+  amount: { value: string; currency: "RUB" };
+  vat_code: number;
+  payment_subject: "commodity" | "service";
+  payment_mode: "full_payment";
+};
+
+function toReceiptItem(
+  description: string,
+  quantity: number,
+  amountRub: number,
+  paymentSubject: "commodity" | "service",
+): YookassaReceiptItem {
+  return {
+    description: description.slice(0, 128),
+    quantity,
+    amount: { value: amountRub.toFixed(2), currency: "RUB" },
+    vat_code: RECEIPT_VAT_CODE,
+    payment_subject: paymentSubject,
+    payment_mode: "full_payment",
+  };
+}
+
 export async function createPayment(input: CreatePaymentInput): Promise<YookassaPayment> {
+  const receiptItems = input.items.map((item) =>
+    toReceiptItem(item.description, item.quantity, item.priceRub * item.quantity, "commodity"),
+  );
+  if (input.shippingCostRub > 0) {
+    receiptItems.push(toReceiptItem("Доставка", 1, input.shippingCostRub, "service"));
+  }
+
   const res = await fetch(`${YOOKASSA_API_BASE}/payments`, {
     method: "POST",
     headers: {
@@ -54,6 +97,10 @@ export async function createPayment(input: CreatePaymentInput): Promise<Yookassa
       capture: true,
       description: `Заказ №${input.orderId} — Wood&Clay`,
       metadata: { orderId: input.orderId },
+      receipt: {
+        customer: { email: input.customerEmail },
+        items: receiptItems,
+      },
     }),
   });
   if (!res.ok) {

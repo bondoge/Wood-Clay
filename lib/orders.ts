@@ -303,11 +303,19 @@ export async function createPaymentForOrder(orderId: number, returnUrlBase: stri
   }
 
   try {
+    const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
     const payment = await createPayment({
       amountRub: order.totalRub,
       orderId,
       returnUrl: `${returnUrlBase}/order/status?token=${returnToken}`,
       idempotenceKey: claim,
+      customerEmail: order.contactEmail,
+      items: items.map((item) => ({
+        description: item.productTitle,
+        quantity: item.quantity,
+        priceRub: item.priceRub,
+      })),
+      shippingCostRub: order.shippingCostRub ?? 0,
     });
     if (!payment.confirmationUrl) throw new Error("ЮKassa response missing confirmation_url");
 

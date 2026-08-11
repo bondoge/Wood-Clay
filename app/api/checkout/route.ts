@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { createOrder, createPaymentForOrder } from "@/lib/orders";
 import { getProfile, updateProfile } from "@/lib/account";
-import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { createRateLimiter, getClientIp, getOrigin } from "@/lib/rate-limit";
 import { normalizeRuPhone } from "@/lib/phone";
 
 const checkoutSchema = z.object({
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
   // what happens next — payment creation failing here never loses it. The
   // client gets returnToken back so it can still send the customer to
   // /order/status, which offers its own retry into createPaymentForOrder.
-  const origin = new URL(request.url).origin;
+  const origin = getOrigin(request);
   const payment = await createPaymentForOrder(result.order.id, origin);
   if (!payment.ok) {
     return NextResponse.json({ ok: false, error: "payment_failed", returnToken: payment.returnToken }, { status: 502 });

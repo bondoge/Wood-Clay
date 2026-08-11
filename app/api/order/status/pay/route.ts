@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createPaymentForOrder, getOrderByReturnToken } from "@/lib/orders";
-import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { createRateLimiter, getClientIp, getOrigin } from "@/lib/rate-limit";
 
 // Lets the customer resume payment for an order they're already looking at
 // on /order/status — token possession is the only authorization here, same
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = getOrigin(request);
   const result = await createPaymentForOrder(order.id, origin);
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 409 });

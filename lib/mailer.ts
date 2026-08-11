@@ -35,6 +35,16 @@ export async function sendVerificationEmail(to: string, code: string) {
   });
 }
 
+export async function sendPasswordResetEmail(to: string, code: string) {
+  const { transport, from } = getTransport();
+  await transport.sendMail({
+    from,
+    to,
+    subject: "Восстановление пароля — Wood&Clay",
+    text: `Код для восстановления пароля: ${code}\n\nКод действителен 10 минут. Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.`,
+  });
+}
+
 export async function sendOrderConfirmationEmail(order: {
   id: number;
   contactEmail: string;

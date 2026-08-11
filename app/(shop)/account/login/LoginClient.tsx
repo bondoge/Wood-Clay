@@ -55,7 +55,7 @@ export default function LoginClient() {
               />
             </label>
             <label className="account-form__wide">
-              <span>Пароль</span>
+              <span>Пароль <small><Link href="/account/forgot-password">Забыли пароль?</Link></small></span>
               <input
                 type="password"
                 name="password"

@@ -7,7 +7,7 @@ import { sendVerificationEmail } from "@/lib/mailer";
 const CODE_TTL_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
-function hashCode(code: string) {
+export function hashCode(code: string) {
   return createHash("sha256").update(code).digest("hex");
 }
 

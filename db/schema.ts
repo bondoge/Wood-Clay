@@ -144,7 +144,7 @@ export const verificationCodes = pgTable("verification_codes", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  channel: text("channel", { enum: ["email", "phone"] }).notNull(),
+  channel: text("channel", { enum: ["email", "phone", "password_reset"] }).notNull(),
   codeHash: text("code_hash").notNull(),
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
   attempts: integer("attempts").notNull().default(0),

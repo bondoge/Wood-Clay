@@ -6,8 +6,12 @@ export const metadata: Metadata = {
   description:
     "Фарфоровые ёлочные игрушки, фигурки и корпоративные подарки, расписанные вручную.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+    ],
+    shortcut: "/favicon.png",
+    apple: "/apple-touch-icon.png",
   },
 };
 

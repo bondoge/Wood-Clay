@@ -118,18 +118,18 @@ export const verificationTokens = pgTable(
   (t) => [primaryKey({ columns: [t.identifier, t.token] })],
 );
 
-// Ours, not Auth.js's — for later checkout/СДЭК. Maps to the address form
-// fields already in AccountClient.tsx.
+// A saved СДЭК pickup point (ПВЗ) — same shape as the orders.cdekPvz*
+// columns below, since this is literally "a pickup point the customer
+// picked before, worth reusing." A user can have several; isDefault marks
+// the one that pre-fills checkout.
 export const addresses = pgTable("addresses", {
   id: serial("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  city: text("city").notNull(),
-  recipientName: text("recipient_name").notNull(),
-  street: text("street").notNull(),
-  postalCode: text("postal_code"),
-  deliveryNote: text("delivery_note"),
+  cdekPvzCode: text("cdek_pvz_code").notNull(),
+  cdekPvzCity: text("cdek_pvz_city").notNull(),
+  cdekPvzAddress: text("cdek_pvz_address").notNull(),
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });

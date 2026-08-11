@@ -7,6 +7,7 @@ import { signOut, useSession } from "next-auth/react";
 import { CatalogFooter, CatalogHeader } from "../catalog/catalog-components";
 import { useCart } from "../catalog/CartContext";
 import { formatPrice } from "../catalog/catalog-utils";
+import CdekPvzPicker, { type CdekPvz } from "../catalog/cart/CdekPvzPicker";
 
 type Profile = {
   id: string;
@@ -19,12 +20,12 @@ type Profile = {
 };
 
 type Address = {
-  city: string;
-  recipientName: string;
-  street: string;
-  postalCode: string | null;
-  deliveryNote: string | null;
-} | null;
+  id: number;
+  cdekPvzCode: string;
+  cdekPvzCity: string;
+  cdekPvzAddress: string;
+  isDefault: boolean;
+};
 
 type OrderItem = { productId: number | null; title: string; slug: string; priceRub: number; quantity: number };
 type Order = {
@@ -57,11 +58,11 @@ const navigation: { id: AccountSection; label: string; icon: string }[] = [
 
 export default function AccountClient({
   profile,
-  address,
+  addresses,
   orders,
 }: {
   profile: Profile;
-  address: Address;
+  addresses: Address[];
   orders: Order[];
 }) {
   const router = useRouter();
@@ -70,6 +71,8 @@ export default function AccountClient({
   const [activeSection, setActiveSection] = useState<AccountSection>("overview");
   const [savedMessage, setSavedMessage] = useState("");
   const [phone, setPhone] = useState(profile.phone ?? "");
+  const [addingAddress, setAddingAddress] = useState(false);
+  const defaultAddress = useMemo(() => addresses.find((a) => a.isDefault) ?? addresses[0] ?? null, [addresses]);
   const [emailVerificationOpen, setEmailVerificationOpen] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState("");
@@ -81,9 +84,9 @@ export default function AccountClient({
 
   const cartPreview = useMemo(() => cart.lines.slice(0, 3), [cart.lines]);
   const profileCompletionPercent = useMemo(() => {
-    const fields = [profile.firstName, profile.lastName, phone, address?.city];
+    const fields = [profile.firstName, profile.lastName, phone, defaultAddress?.cdekPvzCity];
     return Math.round((fields.filter(Boolean).length / fields.length) * 100);
-  }, [profile.firstName, profile.lastName, phone, address]);
+  }, [profile.firstName, profile.lastName, phone, defaultAddress]);
 
   useEffect(() => {
     if (resendSeconds <= 0) return;
@@ -130,24 +133,34 @@ export default function AccountClient({
     setSavedMessage(response?.ok ? "Личные данные сохранены" : "Не удалось сохранить изменения. Попробуйте ещё раз.");
   };
 
-  const saveAddress = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
+  const handleAddAddress = async (pvz: CdekPvz) => {
     setSavedMessage("");
-
     const response = await fetch("/api/account/addresses", {
-      method: "PUT",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        city: String(form.get("city") ?? "").trim(),
-        recipientName: String(form.get("recipient") ?? "").trim(),
-        street: String(form.get("street") ?? "").trim(),
-        postalCode: String(form.get("postalCode") ?? "").trim(),
-        deliveryNote: String(form.get("deliveryNote") ?? "").trim() || undefined,
-      }),
+      body: JSON.stringify({ cdekPvzCode: pvz.code, cdekPvzCity: pvz.city, cdekPvzAddress: pvz.address }),
     }).catch(() => null);
 
-    setSavedMessage(response?.ok ? "Адрес сохранён" : "Не удалось сохранить адрес. Попробуйте ещё раз.");
+    if (response?.ok) {
+      setAddingAddress(false);
+      router.refresh();
+    } else {
+      setSavedMessage("Не удалось сохранить пункт выдачи. Попробуйте ещё раз.");
+    }
+  };
+
+  const handleMakeDefaultAddress = async (addressId: number) => {
+    const response = await fetch(`/api/account/addresses/${addressId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isDefault: true }),
+    }).catch(() => null);
+    if (response?.ok) router.refresh();
+  };
+
+  const handleRemoveAddress = async (addressId: number) => {
+    const response = await fetch(`/api/account/addresses/${addressId}`, { method: "DELETE" }).catch(() => null);
+    if (response?.ok) router.refresh();
   };
 
   const savePaymentPreference = (event: FormEvent<HTMLFormElement>) => {
@@ -271,7 +284,7 @@ export default function AccountClient({
                   <span>В корзине</span><strong>{cart.itemCount}</strong><small>{cart.itemCount ? formatPrice(cart.total) : "Корзина пуста"}</small><i aria-hidden="true">→</i>
                 </button>
                 <button type="button" onClick={() => selectSection("addresses")}>
-                  <span>Адрес доставки</span><strong className="account-stat-grid__text">{address ? address.city : "Не указан"}</strong><small>{address ? "Изменить адрес" : "Добавьте для быстрого заказа"}</small><i aria-hidden="true">→</i>
+                  <span>Пункт выдачи</span><strong className="account-stat-grid__text">{defaultAddress ? defaultAddress.cdekPvzCity : "Не указан"}</strong><small>{defaultAddress ? "Изменить пункт" : "Добавьте для быстрого заказа"}</small><i aria-hidden="true">→</i>
                 </button>
               </div>
 
@@ -441,19 +454,51 @@ export default function AccountClient({
 
           {activeSection === "addresses" && (
             <section className="account-panel" aria-labelledby="account-address-title">
-              <header className="account-panel__heading"><div><p className="catalog-eyebrow">Доставка</p><h2 id="account-address-title">Адреса</h2></div><p>Основной адрес будет выбран при оформлении заказа.</p></header>
-              <form className="account-form" data-account-form="address" onSubmit={saveAddress}>
-                <div className="account-address-label"><span>Основной адрес</span><small>СДЭК</small></div>
-                <div className="account-form__grid">
-                  <label><span>Город</span><input name="city" autoComplete="address-level2" placeholder="Москва" defaultValue={address?.city ?? ""} /></label>
-                  <label><span>Получатель</span><input name="recipient" autoComplete="name" placeholder="Имя и фамилия" defaultValue={address?.recipientName ?? ""} /></label>
-                  <label className="account-form__wide"><span>Улица и дом</span><input name="street" autoComplete="street-address" placeholder="Улица, дом, квартира" defaultValue={address?.street ?? ""} /></label>
-                  <label><span>Индекс <small>необязательно</small></span><input name="postalCode" inputMode="numeric" autoComplete="postal-code" placeholder="000000" defaultValue={address?.postalCode ?? ""} /></label>
-                  <label><span>Комментарий курьеру <small>необязательно</small></span><input name="deliveryNote" placeholder="Код домофона, этаж" defaultValue={address?.deliveryNote ?? ""} /></label>
+              <header className="account-panel__heading"><div><p className="catalog-eyebrow">Доставка</p><h2 id="account-address-title">Пункты выдачи СДЭК</h2></div><p>Основной пункт будет выбран при оформлении заказа.</p></header>
+
+              {addresses.length > 0 && (
+                <div className="account-address-list">
+                  {addresses.map((addr) => (
+                    <article className={`account-address-card${addr.isDefault ? " is-default" : ""}`} key={addr.id}>
+                      <div>
+                        <strong>{addr.cdekPvzCity}</strong>
+                        <span>{addr.cdekPvzAddress}</span>
+                      </div>
+                      {addr.isDefault ? (
+                        <small className="account-address-card__badge">Основной</small>
+                      ) : (
+                        <button type="button" onClick={() => void handleMakeDefaultAddress(addr.id)}>Сделать основным</button>
+                      )}
+                      <button
+                        type="button"
+                        className="account-address-card__remove"
+                        aria-label={`Удалить пункт выдачи ${addr.cdekPvzCity}, ${addr.cdekPvzAddress}`}
+                        onClick={() => void handleRemoveAddress(addr.id)}
+                      >
+                        ×
+                      </button>
+                    </article>
+                  ))}
                 </div>
-                <label className="account-check"><input type="checkbox" name="defaultAddress" defaultChecked /><span>Использовать как основной адрес</span></label>
-                <div className="account-form__footer"><p>{savedMessage || "Адрес можно изменить перед каждой покупкой."}</p><button type="submit">Сохранить адрес</button></div>
-              </form>
+              )}
+
+              {addresses.length === 0 && !addingAddress && (
+                <div className="account-empty-state">
+                  <span aria-hidden="true">◇</span>
+                  <h3>Пунктов выдачи пока нет</h3>
+                  <p>Добавьте пункт выдачи СДЭК, чтобы быстрее оформлять заказы.</p>
+                </div>
+              )}
+
+              {addingAddress ? (
+                <CdekPvzPicker value={null} onChange={(pvz) => void handleAddAddress(pvz)} />
+              ) : (
+                <button type="button" className="account-address-add" onClick={() => setAddingAddress(true)}>
+                  <span aria-hidden="true">+</span> Добавить пункт выдачи
+                </button>
+              )}
+
+              {savedMessage && <p className="account-address-message" role="alert">{savedMessage}</p>}
             </section>
           )}
 

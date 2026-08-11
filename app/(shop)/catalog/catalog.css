@@ -2160,6 +2160,15 @@
 .cdek-picker__confirm:hover:not(:disabled) { background: #2d382f; }
 .cdek-picker__confirm:disabled { opacity: .4; cursor: not-allowed; }
 
+.cdek-default-prompt { margin-top: 12px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid rgba(53,73,54,.2); border-radius: 13px; background: rgba(53,73,54,.06); }
+.cdek-default-prompt p { margin: 0; color: #2a312a; font-size: 10px; font-weight: 550; }
+.cdek-default-prompt > div { flex-shrink: 0; display: flex; gap: 8px; }
+.cdek-default-prompt button { height: 34px; padding: 0 15px; border: 1px solid rgba(37,48,39,.16); border-radius: 9px; background: #fff; cursor: pointer; font-size: 9px; font-weight: 620; transition: border-color 160ms ease, background 160ms ease; }
+.cdek-default-prompt button:first-child { color: #f6f3ed; border-color: transparent; background: #222b23; }
+.cdek-default-prompt button:first-child:hover { background: #2d382f; }
+.cdek-default-prompt button:last-child { color: #545a54; }
+.cdek-default-prompt button:last-child:hover { border-color: rgba(55,76,57,.38); }
+
 @media (min-width: 900px) {
   .cdek-offices-layout { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
   .cdek-offices-map { height: 340px; }
@@ -2204,6 +2213,10 @@
   /* iOS Safari auto-zooms the page on focusing any input under 16px —
      16px here, not a smaller size, is the fix, not a stylistic choice. */
   .cdek-city-search input { font-size: 16px; }
+
+  .cdek-default-prompt { flex-direction: column; align-items: stretch; gap: 10px; }
+  .cdek-default-prompt > div { justify-content: stretch; }
+  .cdek-default-prompt button { flex: 1; }
 
   .mini-cart__trigger {
     width: 38px;

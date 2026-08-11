@@ -12,7 +12,8 @@ vi.mock("@/db/client", async () => {
   return { db: drizzle(client, { schema }) };
 });
 
-const { getProfile, updateProfile, getDefaultAddress, upsertDefaultAddress } = await import("./account");
+const { getProfile, updateProfile, getDefaultAddressForUser, saveAddress, setDefaultAddress, deleteAddress } =
+  await import("./account");
 
 async function insertUser() {
   const [row] = await db
@@ -47,32 +48,60 @@ describe("account access control — user A and user B never see each other's da
     expect((await getProfile(userA))?.firstName).toBe("Алиса");
   });
 
-  it("each user's default address is isolated from the other's", async () => {
+  it("each user's default pickup point is isolated from the other's", async () => {
     const userA = await insertUser();
     const userB = await insertUser();
 
-    await upsertDefaultAddress(userA, { city: "Москва", recipientName: "A", street: "Улица А" });
-    await upsertDefaultAddress(userB, { city: "Казань", recipientName: "B", street: "Улица Б" });
+    await saveAddress(userA, { cdekPvzCode: "MSK1", cdekPvzCity: "Москва", cdekPvzAddress: "Улица А" });
+    await saveAddress(userB, { cdekPvzCode: "KZN1", cdekPvzCity: "Казань", cdekPvzAddress: "Улица Б" });
 
-    expect((await getDefaultAddress(userA))?.city).toBe("Москва");
-    expect((await getDefaultAddress(userB))?.city).toBe("Казань");
+    expect((await getDefaultAddressForUser(userA))?.cdekPvzCity).toBe("Москва");
+    expect((await getDefaultAddressForUser(userB))?.cdekPvzCity).toBe("Казань");
 
-    // Updating B's address must never affect A's row.
-    await upsertDefaultAddress(userB, { city: "Новый город", recipientName: "B2", street: "Улица В" });
-    expect((await getDefaultAddress(userA))?.city).toBe("Москва");
+    // Adding and defaulting a second address for B must never affect A's.
+    await saveAddress(userB, { cdekPvzCode: "SPB1", cdekPvzCity: "Санкт-Петербург", cdekPvzAddress: "Улица В" }, { setDefault: true });
+    expect((await getDefaultAddressForUser(userA))?.cdekPvzCity).toBe("Москва");
   });
 
   it("an address row is always scoped to the user who owns it, never surfaced for another", async () => {
     const userA = await insertUser();
     const userB = await insertUser();
-    const addressA = await upsertDefaultAddress(userA, { city: "Сочи", recipientName: "A", street: "Улица" });
+    const addressA = await saveAddress(userA, { cdekPvzCode: "SOCHI1", cdekPvzCity: "Сочи", cdekPvzAddress: "Улица" });
 
     const rawRow = await db.select().from(addresses).where(eq(addresses.id, addressA.id));
     expect(rawRow[0].userId).toBe(userA);
     expect(rawRow[0].userId).not.toBe(userB);
 
-    // User B has no address yet — getDefaultAddress(userB) must never
-    // surface user A's row just because it's the only one in the table.
-    expect(await getDefaultAddress(userB)).toBeNull();
+    // User B has no address yet — getDefaultAddressForUser(userB) must
+    // never surface user A's row just because it's the only one in the table.
+    expect(await getDefaultAddressForUser(userB)).toBeNull();
+  });
+
+  it("setDefaultAddress for user B can never mark user A's address as default", async () => {
+    const userA = await insertUser();
+    const userB = await insertUser();
+    const addressA = await saveAddress(userA, { cdekPvzCode: "A1", cdekPvzCity: "Москва", cdekPvzAddress: "Улица" });
+
+    expect(await setDefaultAddress(userB, addressA.id)).toBe(false);
+    expect((await getDefaultAddressForUser(userA))?.id).toBe(addressA.id);
+  });
+
+  it("deleteAddress for user B can never delete user A's address", async () => {
+    const userA = await insertUser();
+    const userB = await insertUser();
+    const addressA = await saveAddress(userA, { cdekPvzCode: "A1", cdekPvzCity: "Москва", cdekPvzAddress: "Улица" });
+
+    expect(await deleteAddress(userB, addressA.id)).toBe(false);
+    expect((await getDefaultAddressForUser(userA))?.id).toBe(addressA.id);
+  });
+
+  it("saveAddress upserts by (userId, cdekPvzCode) instead of duplicating", async () => {
+    const userA = await insertUser();
+    await saveAddress(userA, { cdekPvzCode: "A1", cdekPvzCity: "Москва", cdekPvzAddress: "Улица старая" });
+    await saveAddress(userA, { cdekPvzCode: "A1", cdekPvzCity: "Москва", cdekPvzAddress: "Улица новая" });
+
+    const rows = await db.select().from(addresses).where(eq(addresses.userId, userA));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].cdekPvzAddress).toBe("Улица новая");
   });
 });

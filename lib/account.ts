@@ -1,5 +1,5 @@
-import { desc, eq } from "drizzle-orm";
-import { db } from "@/db/client";
+import { and, desc, eq } from "drizzle-orm";
+import { db, type Transaction } from "@/db/client";
 import { addresses, users } from "@/db/schema";
 
 export async function getProfile(userId: string) {
@@ -35,35 +35,104 @@ export async function updateProfile(
   return row;
 }
 
-// The UI only ever manages one address per user, so this reads/writes the
-// most recently touched row rather than exposing a general-purpose
-// addresses-by-id API — there's no client-suppliable address id anywhere,
-// which also means there's no id-based cross-user access surface to guard.
-export async function getDefaultAddress(userId: string) {
-  const [row] = await db
+// Saved СДЭК pickup points (Phase 8). A user can have several; isDefault
+// marks the one checkout pre-fills. id-scoped mutations below always
+// re-check userId ownership in the same WHERE clause rather than trusting
+// the caller — a client-suppliable address id is real cross-user access
+// surface here, unlike the old single-row-per-user design this replaced.
+export type PvzInput = { cdekPvzCode: string; cdekPvzCity: string; cdekPvzAddress: string };
+
+export async function getAddressesForUser(userId: string) {
+  return db
     .select()
     .from(addresses)
     .where(eq(addresses.userId, userId))
-    .orderBy(desc(addresses.createdAt))
+    .orderBy(desc(addresses.isDefault), desc(addresses.createdAt));
+}
+
+export async function getDefaultAddressForUser(userId: string) {
+  const [row] = await db
+    .select()
+    .from(addresses)
+    .where(and(eq(addresses.userId, userId), eq(addresses.isDefault, true)))
     .limit(1);
   return row ?? null;
 }
 
-export async function upsertDefaultAddress(
-  userId: string,
-  data: { city: string; recipientName: string; street: string; postalCode?: string; deliveryNote?: string },
-) {
-  const existing = await getDefaultAddress(userId);
-  const values = { ...data, postalCode: data.postalCode ?? null, deliveryNote: data.deliveryNote ?? null };
+/**
+ * Upserts by (userId, cdekPvzCode) so re-picking the same point never
+ * duplicates. setDefault: true always forces default (clearing every other
+ * row for this user in the same transaction, first); omitted only defaults
+ * a brand-new first address — a later different pick stays non-default
+ * unless the caller explicitly asks (checkout's "Сделать это основным
+ * адресом?" confirmation).
+ */
+export async function saveAddress(userId: string, pvz: PvzInput, opts: { setDefault?: boolean } = {}) {
+  return db.transaction(async (tx: Transaction) => {
+    const [existing] = await tx
+      .select()
+      .from(addresses)
+      .where(and(eq(addresses.userId, userId), eq(addresses.cdekPvzCode, pvz.cdekPvzCode)));
 
-  if (existing) {
-    const [row] = await db.update(addresses).set(values).where(eq(addresses.id, existing.id)).returning();
+    const [anyAddress] = await tx
+      .select({ id: addresses.id })
+      .from(addresses)
+      .where(eq(addresses.userId, userId))
+      .limit(1);
+    const makeDefault = opts.setDefault ?? !anyAddress;
+
+    if (makeDefault) {
+      await tx.update(addresses).set({ isDefault: false }).where(eq(addresses.userId, userId));
+    }
+
+    if (existing) {
+      const [row] = await tx
+        .update(addresses)
+        .set({ ...pvz, isDefault: makeDefault || existing.isDefault })
+        .where(eq(addresses.id, existing.id))
+        .returning();
+      return row;
+    }
+
+    const [row] = await tx
+      .insert(addresses)
+      .values({ ...pvz, userId, isDefault: makeDefault })
+      .returning();
     return row;
-  }
+  });
+}
 
-  const [row] = await db
-    .insert(addresses)
-    .values({ ...values, userId, isDefault: true })
-    .returning();
-  return row;
+export async function setDefaultAddress(userId: string, addressId: number): Promise<boolean> {
+  return db.transaction(async (tx: Transaction) => {
+    const [row] = await tx
+      .select({ id: addresses.id })
+      .from(addresses)
+      .where(and(eq(addresses.id, addressId), eq(addresses.userId, userId)));
+    if (!row) return false;
+
+    await tx.update(addresses).set({ isDefault: false }).where(eq(addresses.userId, userId));
+    await tx.update(addresses).set({ isDefault: true }).where(eq(addresses.id, addressId));
+    return true;
+  });
+}
+
+export async function deleteAddress(userId: string, addressId: number): Promise<boolean> {
+  return db.transaction(async (tx: Transaction) => {
+    const [deleted] = await tx
+      .delete(addresses)
+      .where(and(eq(addresses.id, addressId), eq(addresses.userId, userId)))
+      .returning();
+    if (!deleted) return false;
+
+    if (deleted.isDefault) {
+      const [next] = await tx
+        .select({ id: addresses.id })
+        .from(addresses)
+        .where(eq(addresses.userId, userId))
+        .orderBy(desc(addresses.createdAt))
+        .limit(1);
+      if (next) await tx.update(addresses).set({ isDefault: true }).where(eq(addresses.id, next.id));
+    }
+    return true;
+  });
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getDefaultAddress, getProfile } from "@/lib/account";
+import { getAddressesForUser, getProfile } from "@/lib/account";
 import { getOrdersForUser } from "@/lib/orders";
 import AccountClient from "./AccountClient";
 import "../catalog/catalog.css";
@@ -24,8 +24,8 @@ export default async function AccountPage() {
     redirect("/account/login");
   }
 
-  const address = await getDefaultAddress(session.user.id);
+  const addresses = await getAddressesForUser(session.user.id);
   const orders = await getOrdersForUser(session.user.id);
 
-  return <AccountClient profile={profile} address={address} orders={orders} />;
+  return <AccountClient profile={profile} addresses={addresses} orders={orders} />;
 }

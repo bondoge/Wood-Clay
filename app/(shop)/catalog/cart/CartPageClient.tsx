@@ -2,6 +2,7 @@
 
 import { type FormEvent, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useCart, type CartLine } from "../CartContext";
 import { CatalogFooter, CatalogHeader } from "../catalog-components";
 import { formatPrice } from "../catalog-utils";
@@ -22,9 +23,11 @@ const CHECKOUT_ERROR_MESSAGES: Record<string, string> = {
 export default function CartPageClient({
   totalProductCount,
   checkoutDefaults,
+  defaultPvz,
 }: {
   totalProductCount: number;
   checkoutDefaults: CheckoutDefaults;
+  defaultPvz: CdekPvz | null;
 }) {
   const { lines, itemCount, total, removeItem, setQuantity, clearCart } = useCart();
 
@@ -76,7 +79,7 @@ export default function CartPageClient({
               <Link href="/catalog">← Продолжить покупки</Link>
             </aside>
           </section>
-          <CheckoutPreparation itemCount={itemCount} total={total} defaults={checkoutDefaults} lines={lines} clearCart={clearCart} />
+          <CheckoutPreparation itemCount={itemCount} total={total} defaults={checkoutDefaults} defaultPvz={defaultPvz} lines={lines} clearCart={clearCart} />
         </>
       ) : (
         <section className="cart-page__empty">
@@ -96,19 +99,67 @@ function CheckoutPreparation({
   itemCount,
   total,
   defaults,
+  defaultPvz,
   lines,
   clearCart,
 }: {
   itemCount: number;
   total: number;
   defaults: CheckoutDefaults;
+  defaultPvz: CdekPvz | null;
   lines: CartLine[];
   clearCart: () => void;
 }) {
+  const { data: session } = useSession();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pvz, setPvz] = useState<CdekPvz | null>(null);
+  const [pvz, setPvz] = useState<CdekPvz | null>(defaultPvz);
+  // Tracks the account's current default pickup point (by СДЭК code), so a
+  // different pick can be told apart from just re-confirming the same one.
+  // null means "no saved address yet" — the very next save becomes default
+  // automatically server-side (lib/account.ts's saveAddress), no need to ask.
+  const [defaultCode, setDefaultCode] = useState<string | null>(defaultPvz?.code ?? null);
+  const [defaultPrompt, setDefaultPrompt] = useState<{ id: number; pvz: CdekPvz } | null>(null);
   const grandTotal = total + SHIPPING_FLAT_RATE_RUB;
+
+  const handlePvzChange = (newPvz: CdekPvz) => {
+    setPvz(newPvz);
+    setDefaultPrompt(null);
+    if (!session?.user) return;
+
+    void fetch("/api/account/addresses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cdekPvzCode: newPvz.code, cdekPvzCity: newPvz.city, cdekPvzAddress: newPvz.address }),
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const body = await res.json().catch(() => null);
+        const savedId: number | undefined = body?.address?.id;
+
+        if (defaultCode === null) {
+          // First address ever for this account — already made default
+          // server-side, nothing to ask.
+          setDefaultCode(newPvz.code);
+          return;
+        }
+        if (newPvz.code !== defaultCode && savedId) {
+          setDefaultPrompt({ id: savedId, pvz: newPvz });
+        }
+      })
+      .catch((err) => console.error("Failed to save pickup point to account:", err));
+  };
+
+  const confirmMakeDefault = async () => {
+    if (!defaultPrompt) return;
+    const res = await fetch(`/api/account/addresses/${defaultPrompt.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isDefault: true }),
+    }).catch(() => null);
+    if (res?.ok) setDefaultCode(defaultPrompt.pvz.code);
+    setDefaultPrompt(null);
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -183,7 +234,16 @@ function CheckoutPreparation({
           <fieldset className="checkout-step checkout-integration" data-integration="cdek">
             <legend><span>02</span><strong>Доставка СДЭК</strong></legend>
             <div className="checkout-integration__intro"><p>Выберите пункт выдачи, где будет удобно забрать заказ.</p></div>
-            <CdekPvzPicker value={pvz} onChange={setPvz} />
+            <CdekPvzPicker value={pvz} onChange={handlePvzChange} />
+            {defaultPrompt && (
+              <div className="cdek-default-prompt" role="status">
+                <p>Сделать это основным адресом?</p>
+                <div>
+                  <button type="button" onClick={() => void confirmMakeDefault()}>Да</button>
+                  <button type="button" onClick={() => setDefaultPrompt(null)}>Нет</button>
+                </div>
+              </div>
+            )}
           </fieldset>
           <fieldset className="checkout-step checkout-integration" data-integration="yookassa">
             <legend><span>03</span><strong>Оплата</strong></legend>

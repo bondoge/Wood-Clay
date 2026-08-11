@@ -255,6 +255,7 @@ export default function AccountClient({
                 <span aria-hidden="true">{item.icon}</span>
                 {item.label}
                 {item.id === "cart" && cart.itemCount > 0 && <b>{cart.itemCount}</b>}
+                {item.id === "orders" && orders.length > 0 && <b>{orders.length}</b>}
               </button>
             ))}
             <button type="button" onClick={() => void handleSignOut()}>

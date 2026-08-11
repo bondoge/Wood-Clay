@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { createOrder, createPaymentForOrder } from "@/lib/orders";
+import { getProfile, updateProfile } from "@/lib/account";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { normalizeRuPhone } from "@/lib/phone";
 
@@ -63,6 +64,24 @@ export async function POST(request: Request) {
       { ok: false, error: result.error, productId: "productId" in result ? result.productId : undefined },
       { status },
     );
+  }
+
+  // Keep the account's phone in sync with what the customer actually typed
+  // at checkout — same idea as CdekPvzPicker's live address save, just
+  // triggered on submit instead of on pick since there's no equivalent
+  // "explicit selection" moment for a text field. Never touches email
+  // (that's the login identity — a deliberate account-settings change, not
+  // a checkout side effect) or name (checkout collects one combined field;
+  // splitting it into firstName/lastName here would risk mangling an
+  // existing profile's name for no real benefit).
+  const userId = session?.user?.id;
+  if (userId) {
+    const profile = await getProfile(userId);
+    if (profile && profile.phone !== parsed.data.contact.phone) {
+      await updateProfile(userId, { phone: parsed.data.contact.phone }).catch((err) => {
+        console.error(`checkout: failed to sync phone to profile for user ${userId}:`, err);
+      });
+    }
   }
 
   // The order exists (pending_payment, stock already held) regardless of

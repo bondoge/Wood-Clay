@@ -257,15 +257,15 @@ main {
 }
 
 .site-header {
-  width: min(1320px, calc(100% - 64px));
-  height: 88px;
+  width: min(1420px, calc(100% - 64px));
+  height: 84px;
   position: absolute;
   top: 0;
   z-index: 3;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 44px;
+  gap: 36px;
   color: rgba(255, 250, 245, 0.86);
 }
 
@@ -289,7 +289,12 @@ main {
   filter: brightness(0) invert(1);
 }
 
-.site-header nav {
+/* Split from a shared ".site-header nav" rule: .site-header__nav (this
+   page's own О нас/На заказ/Контакты links, no catalog-nav counterpart)
+   keeps its own spacing, while .site-header__actions below is matched to
+   .catalog-nav__actions's gap/font-size so the shared Каталог/account/
+   cart cluster renders at the same size on every page. */
+.site-header__nav {
   display: flex;
   align-items: center;
   gap: 32px;
@@ -298,6 +303,11 @@ main {
 }
 
 .site-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 13px;
+  font-weight: 500;
   justify-self: end;
 }
 
@@ -2299,15 +2309,6 @@ button:focus-visible {
   .site-header nav {
     gap: 18px;
     font-size: 11px;
-  }
-
-  /* > and :last-of-type, not the bare descendant :last-child this used to
-     be — that matched any <a> anywhere inside (e.g. the mini-cart panel's
-     "Открыть корзину" link, several levels down) as long as it was the
-     last child of its own immediate parent, hiding it too. Scoped to only
-     the direct-child nav links, this hides just "Создать аккаунт". */
-  .site-header__actions > a:last-of-type {
-    display: none;
   }
 
   .hero__content {

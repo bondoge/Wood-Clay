@@ -8,6 +8,7 @@ import { CatalogFooter, CatalogHeader } from "../catalog-components";
 import { formatPrice } from "../catalog-utils";
 import CdekPvzPicker, { type CdekPvz } from "./CdekPvzPicker";
 import { SHIPPING_FLAT_RATE_RUB } from "@/lib/shipping";
+import { formatRuPhoneInput } from "@/lib/phone";
 
 type CheckoutDefaults = { name: string; phone: string; email: string } | null;
 
@@ -227,7 +228,7 @@ function CheckoutPreparation({
             <legend><span>01</span><strong>Получатель</strong></legend>
             <div className="checkout-fields">
               <label><span>Имя и фамилия</span><input type="text" name="customer-name" autoComplete="name" required placeholder="Как к вам обращаться" defaultValue={defaults?.name ?? ""} /></label>
-              <label><span>Телефон</span><input type="tel" name="customer-phone" autoComplete="tel" required placeholder="+7 900 000-00-00" defaultValue={defaults?.phone ?? ""} /></label>
+              <label><span>Телефон</span><input type="tel" name="customer-phone" autoComplete="tel" required placeholder="+7 900 000-00-00" defaultValue={defaults?.phone ?? ""} onChange={(event) => { event.target.value = formatRuPhoneInput(event.target.value); }} /></label>
               <label className="checkout-fields__wide"><span>Email для чека</span><input type="email" name="customer-email" autoComplete="email" required placeholder="name@example.com" defaultValue={defaults?.email ?? ""} /></label>
             </div>
           </fieldset>

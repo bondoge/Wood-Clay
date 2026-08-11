@@ -6,13 +6,26 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { linkOrderToUser } from "@/lib/orders";
+import { normalizeRuPhone } from "@/lib/phone";
 
 const registerSchema = z.object({
   email: z.email().trim().toLowerCase(),
   password: z.string().min(8, "Пароль должен содержать не менее 8 символов"),
   firstName: z.string().trim().min(1).optional(),
   lastName: z.string().trim().min(1).optional(),
-  phone: z.string().trim().min(1).optional(),
+  phone: z
+    .string()
+    .trim()
+    .min(1)
+    .transform((value, ctx) => {
+      const normalized = normalizeRuPhone(value);
+      if (!normalized) {
+        ctx.addIssue({ code: "custom", message: "invalid_phone" });
+        return z.NEVER;
+      }
+      return normalized;
+    })
+    .optional(),
   consent: z.literal(true),
   // Set only by the post-purchase account offer, right after a guest
   // checkout — never taken from a URL. linkOrderToUser itself re-checks the

@@ -8,6 +8,7 @@ import { CatalogFooter, CatalogHeader } from "../catalog/catalog-components";
 import { useCart } from "../catalog/CartContext";
 import { formatPrice } from "../catalog/catalog-utils";
 import CdekPvzPicker, { type CdekPvz } from "../catalog/cart/CdekPvzPicker";
+import { formatRuPhoneInput } from "@/lib/phone";
 
 type Profile = {
   id: string;
@@ -403,7 +404,7 @@ export default function AccountClient({
                   <div className="account-contact-field">
                     <label htmlFor="account-phone">Телефон <small className={verifiedContacts.phone ? "is-verified" : ""}>{verifiedContacts.phone ? "✓ подтверждён" : "не подтверждён"}</small></label>
                     <span className="account-contact-field__control">
-                      <input id="account-phone" type="tel" name="phone" autoComplete="tel" placeholder="+7 900 000-00-00" value={phone} onChange={(event) => { setPhone(event.target.value); setVerifiedContacts((current) => ({ ...current, phone: false })); }} />
+                      <input id="account-phone" type="tel" name="phone" autoComplete="tel" placeholder="+7 900 000-00-00" value={phone} onChange={(event) => { setPhone(formatRuPhoneInput(event.target.value)); setVerifiedContacts((current) => ({ ...current, phone: false })); }} />
                       <button type="button" data-verification-channel="phone" onClick={() => startVerification("phone")}>Подтвердить</button>
                     </span>
                   </div>

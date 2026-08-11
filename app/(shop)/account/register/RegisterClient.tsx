@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { CatalogFooter, CatalogHeader } from "../../catalog/catalog-components";
+import { formatRuPhoneInput } from "@/lib/phone";
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_input: "Проверьте правильность заполнения формы — пароль должен содержать не менее 8 символов.",
@@ -105,7 +106,7 @@ export default function RegisterClient() {
                 autoComplete="tel"
                 placeholder="+7 900 000-00-00"
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                onChange={(event) => setPhone(formatRuPhoneInput(event.target.value))}
               />
             </label>
             <label className="account-form__wide">

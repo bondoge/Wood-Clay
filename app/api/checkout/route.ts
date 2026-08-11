@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { createOrder, createPaymentForOrder } from "@/lib/orders";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { normalizeRuPhone } from "@/lib/phone";
 
 const checkoutSchema = z.object({
   items: z
@@ -10,7 +11,19 @@ const checkoutSchema = z.object({
     .max(100),
   contact: z.object({
     name: z.string().trim().min(1).max(200),
-    phone: z.string().trim().min(1).max(30),
+    phone: z
+      .string()
+      .trim()
+      .min(1)
+      .max(30)
+      .transform((value, ctx) => {
+        const normalized = normalizeRuPhone(value);
+        if (!normalized) {
+          ctx.addIssue({ code: "custom", message: "invalid_phone" });
+          return z.NEVER;
+        }
+        return normalized;
+      }),
     email: z.email().trim().toLowerCase(),
   }),
   delivery: z.object({

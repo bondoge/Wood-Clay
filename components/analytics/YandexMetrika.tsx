@@ -3,7 +3,13 @@
 import { Suspense, useEffect, useRef, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { CONSENT_CHANGE_EVENT, readConsentCookie, type ConsentStatus } from "@/lib/consent";
+import {
+  CONSENT_CHANGE_EVENT,
+  getMetrikaCounterId,
+  isTrackableHost,
+  readConsentCookie,
+  type ConsentStatus,
+} from "@/lib/consent";
 
 declare global {
   interface Window {
@@ -11,10 +17,7 @@ declare global {
   }
 }
 
-const RAW_ID = process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID;
-// Interpolated into an inline script below — restrict to digits so the env
-// var can never inject anything but a counter id.
-const COUNTER_ID = RAW_ID && /^\d+$/.test(RAW_ID) ? RAW_ID : null;
+const COUNTER_ID = getMetrikaCounterId();
 
 function subscribeToConsentChange(callback: () => void) {
   window.addEventListener(CONSENT_CHANGE_EVENT, callback);
@@ -31,18 +34,13 @@ function subscribeNever() {
   return () => {};
 }
 
-function getTrackableHost() {
-  const host = window.location.hostname;
-  return host !== "localhost" && host !== "127.0.0.1";
-}
-
 function getServerTrackableHost() {
   return false;
 }
 
 export function YandexMetrika() {
   const consent = useSyncExternalStore(subscribeToConsentChange, readConsentCookie, getServerConsent);
-  const trackable = useSyncExternalStore(subscribeNever, getTrackableHost, getServerTrackableHost);
+  const trackable = useSyncExternalStore(subscribeNever, isTrackableHost, getServerTrackableHost);
 
   // "Soft" consent: tracking runs by default (implied by continued use, per
   // the notice in ConsentBanner) — only an explicit opt-out stops it.
@@ -61,7 +59,8 @@ export function YandexMetrika() {
           clickmap:true,
           trackLinks:true,
           accurateTrackBounce:true,
-          webvisor:true
+          webvisor:true,
+          ecommerce:"dataLayer"
         });`}
       </Script>
       <noscript>

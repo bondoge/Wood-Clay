@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { trackAddToCart, trackRemoveFromCart } from "@/lib/ecommerce";
 import type { ProductView } from "./product-view";
 
 export type CartLine = {
@@ -147,6 +148,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (status === "loading") return;
       setLines((current) => computeAdd(current, product));
       setLastAdded(product);
+      trackAddToCart(product, 1);
       if (status === "authenticated") {
         postJson("/api/cart/items", { productId: product.id, quantity: 1 }).then((cart) => {
           if (cart) setLines(cart.lines);
@@ -155,6 +157,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     removeItem(id) {
       if (status === "loading") return;
+      // Read from the closure, not inside the setLines updater below — an
+      // updater callback can run more than once under concurrent rendering,
+      // which would double-fire the analytics event.
+      const line = lines.find((current) => current.product.id === id);
+      if (line) trackRemoveFromCart(line.product, line.quantity);
       setLines((current) => computeRemove(current, id));
       if (status === "authenticated") {
         fetch(`/api/cart/items/${id}`, { method: "DELETE" })

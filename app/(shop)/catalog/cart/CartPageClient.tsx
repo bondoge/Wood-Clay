@@ -8,6 +8,7 @@ import { CatalogFooter, CatalogHeader } from "../catalog-components";
 import { formatPrice } from "../catalog-utils";
 import CdekPvzPicker, { type CdekPvz } from "./CdekPvzPicker";
 import { formatRuPhoneInput } from "@/lib/phone";
+import { trackBeginCheckout } from "@/lib/ecommerce";
 
 type CheckoutDefaults = { name: string; phone: string; email: string } | null;
 
@@ -174,6 +175,8 @@ function CheckoutPreparation({
       setError("Выберите пункт выдачи СДЭК.");
       return;
     }
+
+    trackBeginCheckout(lines);
 
     const data = new FormData(event.currentTarget);
     const contact = {

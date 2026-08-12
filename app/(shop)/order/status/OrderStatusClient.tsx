@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { formatPrice } from "../../catalog/catalog-utils";
 import { useCart } from "../../catalog/CartContext";
+import { trackPurchase } from "@/lib/ecommerce";
 import type { OrderSummary } from "@/lib/orders";
 
 export default function OrderStatusClient({ order, token }: { order: OrderSummary; token: string }) {
@@ -74,8 +75,11 @@ function OrderConfirmation({ order, isGuest }: { order: OrderSummary; isGuest: b
 
   // The cart is deliberately left untouched all the way through checkout and
   // the ЮKassa redirect (see CartPageClient) — this is the first point the
-  // order is actually confirmed paid, so it's the right moment to clear it.
+  // order is actually confirmed paid, so it's the right moment to clear it
+  // and report the purchase (trackPurchase guards on order.id itself, so a
+  // reload of this same confirmation page won't double-count revenue).
   useEffect(() => {
+    trackPurchase(order);
     clearCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

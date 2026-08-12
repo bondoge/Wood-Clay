@@ -34,3 +34,20 @@ export function clearYandexMetrikaCookies(counterId: string) {
     document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax; Secure`;
   }
 }
+
+// Shared by YandexMetrika (base pageview tracking) and lib/ecommerce.ts
+// (funnel events) so both gate on the exact same rules.
+
+// Dev-pollution guard — never fire on localhost regardless of consent.
+export function isTrackableHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host !== "localhost" && host !== "127.0.0.1";
+}
+
+export function getMetrikaCounterId(): string | null {
+  const raw = process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID;
+  // Interpolated into an inline script by YandexMetrika — restrict to
+  // digits so the env var can never inject anything but a counter id.
+  return raw && /^\d+$/.test(raw) ? raw : null;
+}

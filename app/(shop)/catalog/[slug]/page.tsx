@@ -8,6 +8,7 @@ import { toProductView } from "../product-view";
 import ProductGallery from "../ProductGallery";
 import AddToCartButton from "../AddToCartButton";
 import CheckoutNowButton from "../CheckoutNowButton";
+import ProductViewTracker from "../ProductViewTracker";
 import "../catalog.css";
 
 // Same reasoning as the catalog listing — price/stock/published state
@@ -39,6 +40,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <main className="catalog-page product-page">
+      <ProductViewTracker product={view} />
       <CatalogHeader />
       <div className="product-breadcrumbs">
         <Link href="/catalog">Каталог</Link><span>/</span><span>{view.type}</span>

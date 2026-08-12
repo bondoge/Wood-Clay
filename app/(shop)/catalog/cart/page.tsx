@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { countPublished } from "@/lib/catalog";
 import { getDefaultAddressForUser, getProfile } from "@/lib/account";
+import { SHIPPING_FLAT_RATE_RUB } from "@/lib/shipping";
 import CartPageClient from "./CartPageClient";
 import "../catalog.css";
 
@@ -34,5 +35,12 @@ export default async function CartPage() {
     ? { code: defaultAddress.cdekPvzCode, city: defaultAddress.cdekPvzCity, address: defaultAddress.cdekPvzAddress, name: "", workTime: "" }
     : null;
 
-  return <CartPageClient totalProductCount={totalProductCount} checkoutDefaults={checkoutDefaults} defaultPvz={defaultPvz} />;
+  return (
+    <CartPageClient
+      totalProductCount={totalProductCount}
+      checkoutDefaults={checkoutDefaults}
+      defaultPvz={defaultPvz}
+      shippingCost={SHIPPING_FLAT_RATE_RUB}
+    />
+  );
 }

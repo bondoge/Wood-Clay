@@ -1,9 +1,10 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { formatPrice } from "../../catalog/catalog-utils";
+import { useCart } from "../../catalog/CartContext";
 import type { OrderSummary } from "@/lib/orders";
 
 export default function OrderStatusClient({ order, token }: { order: OrderSummary; token: string }) {
@@ -69,6 +70,16 @@ function PendingPayment({ order, token }: { order: OrderSummary; token: string }
 }
 
 function OrderConfirmation({ order, isGuest }: { order: OrderSummary; isGuest: boolean }) {
+  const { clearCart } = useCart();
+
+  // The cart is deliberately left untouched all the way through checkout and
+  // the ЮKassa redirect (see CartPageClient) — this is the first point the
+  // order is actually confirmed paid, so it's the right moment to clear it.
+  useEffect(() => {
+    clearCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <section className="order-confirmation">
       <div className="order-confirmation__intro">

@@ -7,7 +7,6 @@ import { useCart, type CartLine } from "../CartContext";
 import { CatalogFooter, CatalogHeader } from "../catalog-components";
 import { formatPrice } from "../catalog-utils";
 import CdekPvzPicker, { type CdekPvz } from "./CdekPvzPicker";
-import { SHIPPING_FLAT_RATE_RUB } from "@/lib/shipping";
 import { formatRuPhoneInput } from "@/lib/phone";
 
 type CheckoutDefaults = { name: string; phone: string; email: string } | null;
@@ -25,10 +24,17 @@ export default function CartPageClient({
   totalProductCount,
   checkoutDefaults,
   defaultPvz,
+  shippingCost,
 }: {
   totalProductCount: number;
   checkoutDefaults: CheckoutDefaults;
   defaultPvz: CdekPvz | null;
+  // Passed down from the server component (page.tsx reads lib/shipping.ts
+  // directly) rather than imported here — SHIPPING_FLAT_RATE_RUB reads a
+  // non-NEXT_PUBLIC_ env var, which is undefined in browser JS, so importing
+  // it in this client component silently fell back to the 450 default
+  // regardless of the real (restart-only, no-rebuild) configured value.
+  shippingCost: number;
 }) {
   const { lines, itemCount, total, removeItem, setQuantity, clearCart } = useCart();
 
@@ -73,14 +79,14 @@ export default function CartPageClient({
             <aside className="cart-summary">
               <p className="catalog-eyebrow">Ваш заказ</p>
               <div><span>Товары · {itemCount}</span><span>{formatPrice(total)}</span></div>
-              <div><span>Доставка СДЭК</span><span>{formatPrice(SHIPPING_FLAT_RATE_RUB)}</span></div>
-              <div className="cart-summary__total"><strong>Итого</strong><strong>{formatPrice(total + SHIPPING_FLAT_RATE_RUB)}</strong></div>
+              <div><span>Доставка СДЭК</span><span>{formatPrice(shippingCost)}</span></div>
+              <div className="cart-summary__total"><strong>Итого</strong><strong>{formatPrice(total + shippingCost)}</strong></div>
               <a href="#checkout">Перейти к оформлению <span aria-hidden="true">↓</span></a>
               <p>Фиксированная стоимость доставки СДЭК до выбранного пункта выдачи.</p>
               <Link href="/catalog">← Продолжить покупки</Link>
             </aside>
           </section>
-          <CheckoutPreparation itemCount={itemCount} total={total} defaults={checkoutDefaults} defaultPvz={defaultPvz} lines={lines} clearCart={clearCart} />
+          <CheckoutPreparation itemCount={itemCount} total={total} defaults={checkoutDefaults} defaultPvz={defaultPvz} lines={lines} shippingCost={shippingCost} />
         </>
       ) : (
         <section className="cart-page__empty">
@@ -102,14 +108,14 @@ function CheckoutPreparation({
   defaults,
   defaultPvz,
   lines,
-  clearCart,
+  shippingCost,
 }: {
   itemCount: number;
   total: number;
   defaults: CheckoutDefaults;
   defaultPvz: CdekPvz | null;
   lines: CartLine[];
-  clearCart: () => void;
+  shippingCost: number;
 }) {
   const { data: session } = useSession();
   const [submitting, setSubmitting] = useState(false);
@@ -121,7 +127,7 @@ function CheckoutPreparation({
   // automatically server-side (lib/account.ts's saveAddress), no need to ask.
   const [defaultCode, setDefaultCode] = useState<string | null>(defaultPvz?.code ?? null);
   const [defaultPrompt, setDefaultPrompt] = useState<{ id: number; pvz: CdekPvz } | null>(null);
-  const grandTotal = total + SHIPPING_FLAT_RATE_RUB;
+  const grandTotal = total + shippingCost;
 
   const handlePvzChange = (newPvz: CdekPvz) => {
     setPvz(newPvz);
@@ -201,9 +207,10 @@ function CheckoutPreparation({
     if (!res || !res.ok) {
       // The order itself may still have been created (payment_failed) —
       // send the customer to its status page rather than stranding them,
-      // where they can retry payment for that same order.
+      // where they can retry payment for that same order. The cart stays
+      // intact until OrderStatusClient sees the order actually paid — not
+      // here, since nothing has been paid yet.
       if (body?.error === "payment_failed" && body?.returnToken) {
-        clearCart();
         window.location.href = `/order/status?token=${body.returnToken}`;
         return;
       }
@@ -212,7 +219,9 @@ function CheckoutPreparation({
       return;
     }
 
-    clearCart();
+    // Not clearing the cart here: the customer hasn't paid yet, and may
+    // abandon the ЮKassa page and come back. OrderStatusClient clears it
+    // once the order is confirmed paid.
     window.location.href = body.confirmationUrl;
   }
 
@@ -254,7 +263,7 @@ function CheckoutPreparation({
         <aside className="checkout-order">
           <p className="catalog-eyebrow">К оплате</p>
           <div><span>{itemCount} {pluralizeItems(itemCount)}</span><span>{formatPrice(total)}</span></div>
-          <div><span>Доставка СДЭК</span><span>{formatPrice(SHIPPING_FLAT_RATE_RUB)}</span></div>
+          <div><span>Доставка СДЭК</span><span>{formatPrice(shippingCost)}</span></div>
           <div className="checkout-order__total"><strong>Итого</strong><strong>{formatPrice(grandTotal)}</strong></div>
           {error && <p className="checkout-order__error" role="alert">{error}</p>}
           <label className="consent-check">

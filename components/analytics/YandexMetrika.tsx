@@ -44,7 +44,9 @@ export function YandexMetrika() {
   const consent = useSyncExternalStore(subscribeToConsentChange, readConsentCookie, getServerConsent);
   const trackable = useSyncExternalStore(subscribeNever, getTrackableHost, getServerTrackableHost);
 
-  if (!COUNTER_ID || consent !== "granted" || !trackable) return null;
+  // "Soft" consent: tracking runs by default (implied by continued use, per
+  // the notice in ConsentBanner) — only an explicit opt-out stops it.
+  if (!COUNTER_ID || consent === "denied" || !trackable) return null;
 
   return (
     <>

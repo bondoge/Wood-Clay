@@ -264,15 +264,23 @@ export const orderItems = pgTable("order_items", {
  * to happen ahead of time, into a real table, refreshed periodically by
  * `scripts/refresh-sales-summary.mjs` rather than computed live on read.
  *
+ * productId is deliberately NOT a references() FK to products — Directus
+ * auto-detects a real FK as a relation and requires GraphQL sub-selection on
+ * it (`product_id { ... }` instead of a plain scalar), which broke every
+ * panel on the dashboard at once: Insights batches all of a dashboard's
+ * panels into a single GraphQL request, so one panel requesting product_id
+ * as a bare scalar 400'd the whole batch, silently zeroing out panels that
+ * had nothing to do with this table. This table is a flat denormalized
+ * snapshot (title is already copied in) with no relational use for Directus,
+ * so there's nothing lost by leaving it unconstrained here.
+ *
  * "Paid" here means status IN ('paid', 'fulfilled') — fulfilled is what a
  * paid order becomes once shipped (see orders.status), not a separate sale;
  * filtering on literal 'paid' alone would silently drop revenue for every
  * order marked shipped.
  */
 export const productSalesSummary = pgTable("product_sales_summary", {
-  productId: integer("product_id")
-    .primaryKey()
-    .references(() => products.id, { onDelete: "cascade" }),
+  productId: integer("product_id").primaryKey(),
   title: text("title").notNull(),
   unitsSold: integer("units_sold").notNull(),
   revenueRub: integer("revenue_rub").notNull(),

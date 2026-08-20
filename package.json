@@ -14,6 +14,7 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=.env scripts/apply-migrations.mjs",
+    "refresh:sales-summary": "node --env-file=.env scripts/refresh-sales-summary.mjs",
     "generate:reviews-grid": "node --env-file=.env scripts/generate-reviews-grid.mjs",
     "migrate:catalog-to-postgres": "node --env-file=.env scripts/migrate-to-postgres.mjs"
   },

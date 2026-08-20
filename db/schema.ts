@@ -45,6 +45,9 @@ export const products = pgTable(
     stock: integer("stock").notNull(),
     style: text("style", { enum: styleValues }).notNull().default("author"),
     published: boolean("published").notNull().default(false),
+    // Curator-set highlight flag ("Топ-30" toggle in Directus) — no site
+    // behaviour reads this yet, purely for the admin's own quick-marking use.
+    isTop30: boolean("is_top30").notNull().default(false),
     // The site reads only these, never wb_* — always populated (backfilled
     // 2026-08-10 for every existing row; the seed script is expected to
     // populate both wb_* and own_* on every future import too, so this is

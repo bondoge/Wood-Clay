@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "is_top30" boolean DEFAULT false NOT NULL;

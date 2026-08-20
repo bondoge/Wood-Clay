@@ -61,7 +61,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <div><dt>Роспись</dt><dd>Ручная, {view.styleLabel.toLocaleLowerCase("ru-RU")}</dd></div>
             <div><dt>Категория</dt><dd>{view.type}</dd></div>
             <div><dt>Артикул</dt><dd>{view.article}</dd></div>
-            <div><dt>Остаток</dt><dd>{view.stock} шт.</dd></div>
             {view.lengthCm && view.widthCm && view.heightCm && (
               <div><dt>Размер</dt><dd>{view.lengthCm}×{view.widthCm}×{view.heightCm} см</dd></div>
             )}

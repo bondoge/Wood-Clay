@@ -16,6 +16,7 @@
     "db:migrate": "node --env-file=.env scripts/apply-migrations.mjs",
     "refresh:sales-summary": "node --env-file=.env scripts/refresh-sales-summary.mjs",
     "backfill:wb-dimensions": "node --env-file=.env scripts/backfill-wb-dimensions.mjs",
+    "import:new-wb-products": "node --env-file=.env scripts/import-new-wb-products.mjs",
     "generate:reviews-grid": "node --env-file=.env scripts/generate-reviews-grid.mjs",
     "migrate:catalog-to-postgres": "node --env-file=.env scripts/migrate-to-postgres.mjs"
   },

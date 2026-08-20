@@ -29,7 +29,7 @@ export const products = pgTable(
     // Each has an own_* counterpart below with the identical suffix.
     // ---------------------------------------------------------------------
     wbArticle: text("wb_article").notNull(),
-    wbAccount: integer("wb_account").notNull(), // 1 | 2
+    wbAccount: integer("wb_account").notNull(), // 1 | 2 | 3 — store 3 added 2026-08-20, no catalog-seed presence
     wbTitle: text("wb_title").notNull(),
     wbDescription: text("wb_description").notNull(),
     wbImages: jsonb("wb_images").$type<string[]>().notNull(),

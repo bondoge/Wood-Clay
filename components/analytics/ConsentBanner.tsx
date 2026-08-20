@@ -78,25 +78,31 @@ export function ConsentBanner() {
         Мы используем cookie, включая аналитические (Яндекс.Метрика). Продолжая пользоваться
         сайтом, вы соглашаетесь с их использованием. <Link href="/privacy">Подробнее</Link>.
       </p>
-      <div className="consent-notice__actions">
-        {status === "denied" ? (
-          <button type="button" onClick={() => choose("granted")}>
-            Включить аналитику
-          </button>
-        ) : (
-          <button type="button" onClick={() => choose("denied")}>
-            Отключить аналитику
-          </button>
-        )}
-        <button
-          type="button"
-          className="consent-notice__close"
-          aria-label="Закрыть уведомление"
-          onClick={() => choose(status === "denied" ? "denied" : "granted")}
-        >
-          ×
-        </button>
-      </div>
+      {/* Only a deliberately reopened visit (via the footer's "Настройки
+          cookie" link) gets the enable/disable control — the unprompted
+          first-visit notice is purely informational, control lives in the
+          footer. */}
+      {!firstVisit && (
+        <div className="consent-notice__actions">
+          {status === "denied" ? (
+            <button type="button" onClick={() => choose("granted")}>
+              Включить аналитику
+            </button>
+          ) : (
+            <button type="button" onClick={() => choose("denied")}>
+              Отключить аналитику
+            </button>
+          )}
+        </div>
+      )}
+      <button
+        type="button"
+        className="consent-notice__close"
+        aria-label="Закрыть уведомление"
+        onClick={() => choose(status === "denied" ? "denied" : "granted")}
+      >
+        ×
+      </button>
     </div>
   );
 }

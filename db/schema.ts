@@ -261,8 +261,13 @@ export const orderItems = pgTable("order_items", {
  * database views (or materialized views) as collections at all (confirmed
  * against a live test: a tracked view/matview 404s in the Data Studio no
  * matter how the schema cache is refreshed). So the grouping this needs has
- * to happen ahead of time, into a real table, refreshed periodically by
- * `scripts/refresh-sales-summary.mjs` rather than computed live on read.
+ * to happen ahead of time, into a real table, refreshed periodically rather
+ * than computed live on read. `scripts/refresh-sales-summary.mjs` runs the
+ * refresh (`npm run refresh:sales-summary`, needs the SSH-tunnel PGHOST/etc,
+ * same as db:migrate) — on the server, the same SQL runs every 15 minutes
+ * from root's crontab (`*/15 * * * * docker exec -i woodandclay-postgres
+ * psql ... < /opt/woodclay/refresh-sales-summary.sql`, alongside the
+ * existing nightly backup.sh entry), independent of app deploys.
  *
  * productId is deliberately NOT a references() FK to products — Directus
  * auto-detects a real FK as a relation and requires GraphQL sub-selection on

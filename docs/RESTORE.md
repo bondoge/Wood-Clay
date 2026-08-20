@@ -5,6 +5,27 @@ from S3, restored it into a scratch database on the live server, confirmed
 `psql` could query it, cleaned up. If you change the backup script, the
 bucket, or the server layout, re-run the drill and update this date.
 
+**Broke silently 2026-08-17ish to 2026-08-21** — `backup.sh` hardcoded
+`S3_ENDPOINT=https://...` at the top, but `source $ENV_FILE` further down
+silently overwrote it with `.env`'s own `S3_ENDPOINT` (schemeless — every
+other consumer in this codebase prepends `https://` itself, see
+catalog-seed's `s3.ts`), the moment `S3_ENDPOINT` was added to the server's
+`.env` for the Directus own-image-upload extension. Every nightly backup
+still ran `pg_dump`+`gzip` fine (so local `/opt/woodclay-backups/*.sql.gz`
+copies exist for every day), but `aws s3 cp` failed with "scheme is missing"
+— and since the script runs under `set -euo pipefail`, that failure also
+skipped the final `backup.log` line and the retention-pruning `find -delete`
+below it, which is why old local copies past the 14-day window piled up too.
+Fixed by computing the full URL from `.env`'s `S3_ENDPOINT` *after* sourcing
+it, instead of hardcoding a value above the source line that sourcing could
+shadow. Re-verified by running `backup.sh` manually and confirming the file
+actually lands in an `s3 ls` listing (not just the upload command's own
+"success" output — that would have looked identical either way).
+**`backup.sh` itself is not tracked in this git repo** (server-only, no
+version history) — this class of bug is easy to reintroduce silently if it's
+ever hand-edited on the server again without checking `.env`'s current
+variable names first.
+
 ## Where things are
 
 | What | Value |

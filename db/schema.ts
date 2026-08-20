@@ -48,6 +48,24 @@ export const products = pgTable(
     // Curator-set highlight flag ("Топ-30" toggle in Directus) — no site
     // behaviour reads this yet, purely for the admin's own quick-marking use.
     isTop30: boolean("is_top30").notNull().default(false),
+
+    // ---------------------------------------------------------------------
+    // WB-SOURCED (dimensions) — not written by the regular catalog-seed
+    // upsert (upsert.ts's SET clause never touches these), populated instead
+    // by a standalone one-off/rerunnable script,
+    // scripts/backfill-wb-dimensions.mjs (npm run backfill:wb-dimensions),
+    // matched on the same (wbAccount, wbArticle) key. Nullable: WB's
+    // content/v2/get/cards/list only returns one combined "dimensions"
+    // figure per card — length/width/height/weight *with packaging*, no
+    // separate bare-product size — and not every card has it filled in on
+    // WB's side, so a product can legitimately have none of these. No
+    // own_* curator-editable counterpart exists for these (unlike
+    // title/description) — there's nothing for a human to meaningfully
+    // override here, WB is the sole source.
+    lengthCm: integer("length_cm"),
+    widthCm: integer("width_cm"),
+    heightCm: integer("height_cm"),
+    weightG: integer("weight_g"), // grams, not kg — WB's weightBrutto is kg to 3dp, i.e. whole grams
     // The site reads only these, never wb_* — always populated (backfilled
     // 2026-08-10 for every existing row; the seed script is expected to
     // populate both wb_* and own_* on every future import too, so this is
@@ -265,9 +283,9 @@ export const orderItems = pgTable("order_items", {
  * than computed live on read. `scripts/refresh-sales-summary.mjs` runs the
  * refresh (`npm run refresh:sales-summary`, needs the SSH-tunnel PGHOST/etc,
  * same as db:migrate) — on the server, the same SQL runs every 15 minutes
- * from root's crontab (`*/15 * * * * docker exec -i woodandclay-postgres
- * psql ... < /opt/woodclay/refresh-sales-summary.sql`, alongside the
- * existing nightly backup.sh entry), independent of app deploys.
+ * from root's crontab (minute step of 15, `docker exec -i
+ * woodandclay-postgres psql ... < /opt/woodclay/refresh-sales-summary.sql`,
+ * alongside the existing nightly backup.sh entry), independent of app deploys.
  *
  * productId is deliberately NOT a references() FK to products — Directus
  * auto-detects a real FK as a relation and requires GraphQL sub-selection on

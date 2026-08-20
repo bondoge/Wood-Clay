@@ -18,6 +18,13 @@ export type ProductView = {
   price: number;
   stock: number;
   images: string[];
+  // WB-sourced (with packaging) — see db/schema.ts. Null until
+  // scripts/backfill-wb-dimensions.mjs has matched this product, or if WB
+  // never had the figure filled in for this card.
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
+  weightG: number | null;
 };
 
 const STYLE_LABELS: Record<Style, string> = {
@@ -45,5 +52,9 @@ export function toProductView(product: Product): ProductView {
     price: product.priceRub,
     stock: product.stock,
     images: product.ownImages,
+    lengthCm: product.lengthCm,
+    widthCm: product.widthCm,
+    heightCm: product.heightCm,
+    weightG: product.weightG,
   };
 }

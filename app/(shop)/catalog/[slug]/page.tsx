@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { bySlug, relatedTo } from "@/lib/catalog";
 import { CatalogFooter, CatalogHeader, ProductCard } from "../catalog-components";
-import { formatPrice } from "../catalog-utils";
+import { formatPrice, formatWeight } from "../catalog-utils";
 import { toProductView } from "../product-view";
 import ProductGallery from "../ProductGallery";
 import AddToCartButton from "../AddToCartButton";
@@ -62,6 +62,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <div><dt>Категория</dt><dd>{view.type}</dd></div>
             <div><dt>Артикул</dt><dd>{view.article}</dd></div>
             <div><dt>Остаток</dt><dd>{view.stock} шт.</dd></div>
+            {view.lengthCm && view.widthCm && view.heightCm && (
+              <div><dt>Размер</dt><dd>{view.lengthCm}×{view.widthCm}×{view.heightCm} см</dd></div>
+            )}
+            {view.weightG && (
+              <div><dt>Вес</dt><dd>{formatWeight(view.weightG)}</dd></div>
+            )}
           </dl>
         </aside>
       </section>

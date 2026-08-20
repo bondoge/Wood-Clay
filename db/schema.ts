@@ -1,4 +1,5 @@
-import { pgTable, text, integer, serial, boolean, timestamp, jsonb, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, pgView, text, integer, serial, boolean, timestamp, jsonb, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 
 /**
  * The catalogue lives in server-hosted PostgreSQL (Phase 1 — previously a
@@ -247,3 +248,35 @@ export const orderItems = pgTable("order_items", {
   priceRub: integer("price_rub").notNull(),
   quantity: integer("quantity").notNull(),
 });
+
+/**
+ * Read-only, for Directus Insights (business-analytics dashboards over our
+ * own order data — separate from Яндекс.Метрика, which tracks visitor
+ * behaviour, not money). One row per product, pre-aggregated: Directus's
+ * Insights panels can do single-collection aggregation (count/sum/avg by
+ * time bucket) but have no "group by an arbitrary field" panel type, so
+ * "top products by units/revenue" can't be built as a live join+aggregation
+ * in the panel UI — this view does that grouping once, in SQL, so the
+ * Directus panels just read flat pre-summed rows.
+ *
+ * "Paid" here means status IN ('paid', 'fulfilled') — fulfilled is what a
+ * paid order becomes once shipped (see orders.status), not a separate sale;
+ * filtering on literal 'paid' alone would silently drop revenue for every
+ * order marked shipped.
+ */
+export const productSalesSummary = pgView("product_sales_summary", {
+  productId: integer("product_id").notNull(),
+  title: text("title").notNull(),
+  unitsSold: integer("units_sold").notNull(),
+  revenueRub: integer("revenue_rub").notNull(),
+}).as(sql`
+  select
+    p.id as product_id,
+    p.own_title as title,
+    coalesce(sum(oi.quantity) filter (where o.status in ('paid', 'fulfilled')), 0)::int as units_sold,
+    coalesce(sum(oi.price_rub * oi.quantity) filter (where o.status in ('paid', 'fulfilled')), 0)::int as revenue_rub
+  from products p
+  left join order_items oi on oi.product_id = p.id
+  left join orders o on o.id = oi.order_id
+  group by p.id, p.own_title
+`);

@@ -6,8 +6,7 @@ import { CollectionsBlock } from "./CollectionsBlock";
 import type { ProductView } from "./product-view";
 import { formatPrice, pluralizeProducts } from "./catalog-utils";
 import { computeCategories, computeCollectionTiles, computeStyles, matchesCategory, normalize } from "./collections";
-
-const PAGE_SIZE = 24;
+import { PAGE_SIZE } from "./catalog-constants";
 
 const SORT_OPTIONS = [
   { value: "relevance", label: "По релевантности" },

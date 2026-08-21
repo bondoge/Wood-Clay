@@ -901,7 +901,7 @@ main {
   text-transform: uppercase;
 }
 
-.reviews h1 {
+.reviews #reviews-heading {
   margin: 0;
   font-family: "Instrument Sans", "Manrope", Arial, sans-serif;
   font-size: clamp(60px, 5.6vw, 82px);
@@ -2058,8 +2058,7 @@ main {
   text-transform: uppercase;
 }
 
-.footer-column a,
-.footer-link--disabled {
+.footer-column a {
   min-height: 25px;
   position: relative;
   display: inline-flex;
@@ -2107,22 +2106,6 @@ main {
 
 .footer-column--contacts a:hover > span {
   transform: translate(2px, -2px);
-}
-
-.footer-link--disabled {
-  color: rgba(244, 241, 234, 0.26);
-  cursor: default;
-}
-
-.footer-link--disabled small {
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.055);
-  color: rgba(244, 241, 234, 0.34);
-  font-size: 7px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .site-footer__meta {
@@ -2557,7 +2540,7 @@ button:focus-visible {
     gap: 20px;
   }
 
-  .reviews h1 {
+  .reviews #reviews-heading {
     font-size: clamp(54px, 16vw, 72px);
   }
 
@@ -2845,8 +2828,7 @@ button:focus-visible {
     grid-column: auto;
   }
 
-  .footer-column a,
-  .footer-link--disabled {
+  .footer-column a {
     min-height: 28px;
     font-size: 12px;
   }

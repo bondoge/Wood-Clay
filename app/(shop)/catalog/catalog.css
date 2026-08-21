@@ -1612,6 +1612,14 @@
   gap: clamp(48px, 7vw, 110px);
 }
 
+/* Same facts-list styling, single centered column — for pages with no
+   gallery image to pair it with (e.g. /kontakty), instead of leaving the
+   gallery grid track empty. */
+.product-detail--single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 620px;
+}
+
 .product-gallery__stage {
   aspect-ratio: 1 / 1.05;
   position: relative;

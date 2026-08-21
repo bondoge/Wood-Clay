@@ -27,10 +27,17 @@ export default async function Home() {
   const collectionTiles = computeCollectionTiles(styles, categories, products);
 
   return (
-    <SessionProvider session={session}>
-      <CartProvider>
-        <HomeClient collectionTiles={collectionTiles} />
-      </CartProvider>
-    </SessionProvider>
+    <>
+      {/* Hero <video>'s poster is the page's LCP element (measured — see
+          findings.md). This hoists into <head> and lets the browser start
+          fetching it before it reaches the <video poster> attribute in the
+          DOM, rather than discovering it mid-parse. */}
+      <link rel="preload" as="image" href="/hero-poster.jpg" fetchPriority="high" />
+      <SessionProvider session={session}>
+        <CartProvider>
+          <HomeClient collectionTiles={collectionTiles} />
+        </CartProvider>
+      </SessionProvider>
+    </>
   );
 }

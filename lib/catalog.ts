@@ -1,4 +1,4 @@
-import { and, count, eq, ne, or } from "drizzle-orm";
+import { and, count, eq, gt, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
 import { productSelectSchema, type Product, type Style } from "@/db/validators";
@@ -30,6 +30,17 @@ function parseRowsLenient(rows: unknown[]): Product[] {
 
 export async function listPublished(): Promise<Product[]> {
   const rows = await db.select().from(products).where(eq(products.published, true));
+  return parseRowsLenient(rows);
+}
+
+// For the sitemap (app/sitemap.ts) — an out-of-stock product still shows on
+// the site (with an "in stock" claim that's arguably wrong, see findings.md)
+// but shouldn't be offered to a crawler as a URL worth indexing.
+export async function listPublishedInStock(): Promise<Product[]> {
+  const rows = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.published, true), gt(products.stock, 0)));
   return parseRowsLenient(rows);
 }
 

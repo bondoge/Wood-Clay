@@ -19,8 +19,9 @@ export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "
 
       <nav aria-label="Основная навигация">
         <Link href="/">Главная</Link>
-        <Link href="/#about">О нас</Link>
-        <Link href="/#custom">Корпоративным клиентам</Link>
+        <Link href="/o-nas">О нас</Link>
+        <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
+        <Link href="/kontakty">Контакты</Link>
       </nav>
 
       <div className="catalog-nav__actions">
@@ -211,7 +212,9 @@ export function CatalogFooter() {
           <nav className="footer-column" aria-label="Навигация по сайту">
             <p>Навигация</p>
             <Link href="/">Главная</Link>
-            <Link href="/#custom">Корпоративным клиентам</Link>
+            <Link href="/o-nas">О нас</Link>
+            <Link href="/kontakty">Контакты</Link>
+            <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
             <Link href="/catalog">Каталог</Link>
             <Link href="/account">Личный кабинет</Link>
             <Link href="/oferta">Оферта</Link>
@@ -230,7 +233,6 @@ export function CatalogFooter() {
           <div className="footer-column footer-column--social">
             <p>Социальные сети</p>
             <a href="https://t.me/Kiss_Love_odsk" target="_blank" rel="noreferrer">Telegram</a>
-            <span className="footer-link--disabled" aria-disabled="true">Instagram <small>скоро</small></span>
           </div>
         </div>
 

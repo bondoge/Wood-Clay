@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { listPublished } from "@/lib/catalog";
 import CatalogClient from "./CatalogClient";
+import { PAGE_SIZE } from "./catalog-constants";
 import { toProductView } from "./product-view";
+import { ItemListJsonLd } from "@/components/seo/ItemListJsonLd";
 import "./catalog.css";
 
 export const metadata: Metadata = {
@@ -23,5 +25,17 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     listPublished().then((rows) => rows.map(toProductView)),
     searchParams,
   ]);
-  return <CatalogClient products={products} initialStyle={style} initialCategory={category} />;
+  return (
+    <>
+      {/* Scoped to the first PAGE_SIZE items — the default sort (no query,
+          no filters) preserves array order (CatalogClient.tsx's scored.sort
+          falls back to `a.index - b.index`), so this matches what's
+          actually rendered on load, and avoids inlining a multi-hundred-KB
+          JSON block for the whole catalogue. */}
+      <ItemListJsonLd
+        items={products.slice(0, PAGE_SIZE).map((p) => ({ name: p.title, slug: p.slug, image: p.images[0] }))}
+      />
+      <CatalogClient products={products} initialStyle={style} initialCategory={category} />
+    </>
+  );
 }

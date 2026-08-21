@@ -9,6 +9,8 @@ import ProductGallery from "../ProductGallery";
 import AddToCartButton from "../AddToCartButton";
 import CheckoutNowButton from "../CheckoutNowButton";
 import ProductViewTracker from "../ProductViewTracker";
+import { ProductJsonLd } from "@/components/seo/ProductJsonLd";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
 import "../catalog.css";
 
 // Same reasoning as the catalog listing — price/stock/published state
@@ -40,6 +42,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <main className="catalog-page product-page">
+      <ProductJsonLd product={product} />
+      <BreadcrumbJsonLd
+        crumbs={[
+          { name: "Каталог", path: "/catalog" },
+          { name: view.type, path: `/catalog/${view.slug}` },
+        ]}
+      />
       <ProductViewTracker product={view} />
       <CatalogHeader />
       <div className="product-breadcrumbs">

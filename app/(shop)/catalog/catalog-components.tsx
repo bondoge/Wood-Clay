@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AddToCartButton from "./AddToCartButton";
@@ -26,8 +26,87 @@ export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "
 
       <div className="catalog-nav__actions">
         <HeaderAccountActions current={current} />
+        <MobileNavToggle>
+          <Link href="/">Главная</Link>
+          <Link href="/o-nas">О нас</Link>
+          <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
+          <Link href="/kontakty">Контакты</Link>
+          <MobileAccountLink />
+        </MobileNavToggle>
       </div>
     </header>
+  );
+}
+
+// Hamburger toggle + link panel for the header nav that both .site-header
+// (home page) and .catalog-nav (every other page) hide outright below their
+// respective breakpoints — see .mobile-nav rules in globals.css/catalog.css.
+// Each caller passes its own links (the "Главная" href differs: "#top" on
+// the home page's own header vs "/" everywhere else), so this only owns the
+// toggle/panel behaviour, not the link list.
+export function MobileNavToggle({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="mobile-nav" ref={rootRef}>
+      <button
+        type="button"
+        className="mobile-nav__toggle"
+        aria-expanded={open}
+        aria-controls="mobile-nav-panel"
+        aria-label={open ? "Закрыть меню" : "Открыть меню"}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
+      </button>
+      <div
+        id="mobile-nav-panel"
+        className={`mobile-nav__panel${open ? " is-open" : ""}`}
+        aria-label="Основная навигация"
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("a")) setOpen(false);
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// The header's account/register link, duplicated inside the mobile nav
+// panel — see the ">a[href=\"/account/register\"], >a.catalog-nav__account"
+// hide rules in globals.css/catalog.css. Below the breakpoint where the
+// toggle appears, the visible action row (Каталог + cart + toggle) is
+// already at its width limit, so "Создать аккаунт"/"Кабинет" moves into the
+// panel instead of being dropped.
+export function MobileAccountLink() {
+  const { data: session } = useSession();
+  const displayName = session?.user?.name?.trim();
+  return session?.user ? (
+    <Link href="/account">{displayName || "Кабинет"}</Link>
+  ) : (
+    <Link href="/account/register">Создать аккаунт</Link>
   );
 }
 

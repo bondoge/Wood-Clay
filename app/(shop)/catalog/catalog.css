@@ -1200,6 +1200,24 @@
     display: none;
   }
 
+  .mobile-nav {
+    display: block;
+  }
+
+  /* Same reasoning as .site-header__actions in globals.css: frees room for
+     the toggle by moving the account link into the panel. */
+  .catalog-nav__actions > a[href="/account/register"],
+  .catalog-nav__actions > a.catalog-nav__account {
+    display: none;
+  }
+
+  /* Matches .site-header__actions's mobile gap (globals.css) so the
+     Каталог/cart/menu cluster reads the same on every page. */
+  .catalog-nav__actions {
+    gap: 18px;
+    font-size: 11px;
+  }
+
   .catalog-collection-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1234,11 +1252,6 @@
   .catalog-nav {
     width: calc(100% - 36px);
     height: 72px;
-  }
-
-  .catalog-nav__actions {
-    gap: 6px;
-    font-size: 11px;
   }
 
   .catalog-nav__account {

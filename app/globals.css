@@ -467,6 +467,131 @@ main {
   transform-origin: left;
 }
 
+/* Shared hamburger toggle + dropdown panel for the nav both .site-header
+   (here) and .catalog-nav (catalog.css) hide outright below their own
+   breakpoint. Deliberately styled to match .mini-cart__trigger/__panel
+   (this file/catalog.css) — same pill trigger, same floating glass card,
+   same open transition — so the two toggles read as one system instead of
+   two different pieces of UI bolted on next to each other. The base rules
+   here are tuned for the cream .catalog-nav context (a dark pill, like
+   .mini-cart__trigger's default); .site-header overrides to the glass
+   variant below, mirroring .site-header .mini-cart__trigger. */
+.mobile-nav {
+  display: none;
+}
+
+.mobile-nav__toggle {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 12px;
+  color: #f6f3ed;
+  background: #222b23;
+  cursor: pointer;
+}
+
+.mobile-nav__toggle:focus-visible {
+  outline: 2px solid #222720;
+  outline-offset: 3px;
+}
+
+.mobile-nav__toggle span {
+  width: 16px;
+  height: 1.5px;
+  display: block;
+  background: currentColor;
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+
+.mobile-nav__toggle[aria-expanded="true"] span:first-child {
+  transform: translateY(5.5px) rotate(45deg);
+}
+
+.mobile-nav__toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+
+.mobile-nav__toggle[aria-expanded="true"] span:last-child {
+  transform: translateY(-5.5px) rotate(-45deg);
+}
+
+.mobile-nav__panel {
+  width: min(280px, calc(100vw - 28px));
+  padding: 16px;
+  position: fixed;
+  z-index: 81;
+  top: 70px;
+  right: max(18px, calc((100vw - 1420px) / 2));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid rgba(25, 30, 25, 0.08);
+  border-radius: 22px;
+  color: #283028;
+  background: rgba(250, 248, 244, 0.94);
+  box-shadow: 0 30px 90px rgba(24, 22, 18, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px) scale(0.985);
+  transform-origin: top right;
+  backdrop-filter: blur(28px) saturate(130%);
+  -webkit-backdrop-filter: blur(28px) saturate(130%);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.mobile-nav__panel.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.mobile-nav__panel a {
+  padding: 12px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.mobile-nav__panel a:hover {
+  background: rgba(34, 43, 35, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav__toggle span,
+  .mobile-nav__panel {
+    transition: none;
+  }
+}
+
+.site-header .mobile-nav__toggle {
+  color: #fffdf8;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: background 180ms ease;
+}
+
+.site-header .mobile-nav__toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.site-header .mobile-nav__toggle:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.92);
+  outline-offset: 4px;
+}
+
+@media (max-width: 760px) {
+  .mobile-nav__panel {
+    top: 64px;
+    right: 14px;
+  }
+}
+
 .hero__content {
   width: min(1040px, calc(100% - 48px));
   padding: 100px 0 132px;
@@ -2278,8 +2403,21 @@ button:focus-visible {
     display: none !important;
   }
 
+  .mobile-nav {
+    display: block;
+  }
+
+  /* Frees room for the toggle: Каталог + cart stay visible, the account
+     link moves into the panel (see MobileAccountLink in
+     catalog-components.tsx) — the row is already at its width limit
+     without a 4th item. */
+  .site-header__actions > a[href="/account/register"],
+  .site-header__actions > a.catalog-nav__account {
+    display: none;
+  }
+
   .site-header__actions {
-    gap: 6px;
+    gap: 18px;
     font-size: 11px;
   }
 

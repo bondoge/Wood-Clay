@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CollectionsBlock } from "./(shop)/catalog/CollectionsBlock";
-import { HeaderAccountActions } from "./(shop)/catalog/catalog-components";
+import { HeaderAccountActions, MobileAccountLink, MobileNavToggle } from "./(shop)/catalog/catalog-components";
 import type { CollectionTile } from "./(shop)/catalog/collections";
 import { CookieSettingsLink } from "@/components/analytics/CookieSettingsLink";
 import { CorporateInquiryForm } from "./(shop)/korporativnye-podarki/CorporateInquiryForm";
@@ -228,6 +228,13 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
 
           <nav className="site-header__actions" aria-label="Каталог, кабинет и корзина">
             <HeaderAccountActions />
+            <MobileNavToggle>
+              <a href="#top">Главная</a>
+              <Link href="/o-nas">О нас</Link>
+              <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
+              <Link href="/kontakty">Контакты</Link>
+              <MobileAccountLink />
+            </MobileNavToggle>
           </nav>
         </header>
 

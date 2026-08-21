@@ -44,7 +44,6 @@ const contactMethods: Record<
 export function CorporateInquiryForm() {
   const [contactMethod, setContactMethod] = useState<ContactMethod>("email");
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const [consent, setConsent] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("idle");
 
   const activeContact = contactMethods[contactMethod];
@@ -162,24 +161,19 @@ export function CorporateInquiryForm() {
             />
           </label>
 
-          <label className="field field--consent">
-            <input
-              type="checkbox"
-              name="consent"
-              value="true"
-              checked={consent}
-              onChange={(event) => setConsent(event.target.checked)}
-              required
-            />
-            <span>
-              Отправляя форму, вы соглашаетесь на обработку контактных
-              данных в соответствии с{" "}
-              <a href="/privacy">
-                политикой конфиденциальности
-              </a>
-              .
-            </span>
-          </label>
+          {/* No checkbox — submitting the form is treated as consent (see
+              the note below). The hidden field keeps sending consent="true"
+              so /api/corporate-quote's existing validation (which still
+              requires it) doesn't reject every submission. */}
+          <input type="hidden" name="consent" value="true" />
+          <p className="field--consent-note">
+            Отправляя форму, вы соглашаетесь на обработку контактных
+            данных в соответствии с{" "}
+            <a href="/privacy">
+              политикой конфиденциальности
+            </a>
+            .
+          </p>
 
           <button
             className="inquiry-submit"

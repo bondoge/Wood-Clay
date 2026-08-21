@@ -75,10 +75,15 @@ const reviews: Review[] = [
   },
 ];
 
+// 2371/2420/2421 404 against the S3 bucket (files never uploaded or since
+// removed) — excluded rather than left to render as grey placeholder tiles.
+const MISSING_ARCHIVE_IMAGE_NUMBERS = new Set([2371, 2420, 2421]);
 const archiveImages = Array.from(
   { length: 2468 - 2313 + 1 },
-  (_, index) => `grid-600/IMG_${2313 + index}.webp`,
-);
+  (_, index) => 2313 + index,
+)
+  .filter((n) => !MISSING_ARCHIVE_IMAGE_NUMBERS.has(n))
+  .map((n) => `grid-600/IMG_${n}.webp`);
 
 const wallRows = [
   archiveImages.slice(0, 52),

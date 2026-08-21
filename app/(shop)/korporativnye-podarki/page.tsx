@@ -137,6 +137,58 @@ export default function CorporatePage() {
           </a>
           <p className="catalog-download__note">Можно сохранить, распечатать или отправить коллегам.</p>
         </div>
+
+        <div className="catalog-preview" aria-hidden="true">
+          <span className="catalog-preview__shadow" />
+          <span className="catalog-preview__sheet catalog-preview__sheet--back" />
+          <span className="catalog-preview__sheet catalog-preview__sheet--middle" />
+
+          <article className="catalog-cover">
+            <header className="catalog-cover__brand">
+              <img
+                className="catalog-cover__mark"
+                src="/woodclay-mark.png"
+                alt=""
+                width="76"
+                height="58"
+              />
+              <img
+                className="catalog-cover__wordmark"
+                src="/woodclay-wordmark.svg"
+                alt=""
+                width="100"
+                height="19"
+              />
+            </header>
+
+            <div className="catalog-cover__art">
+              <span />
+              <img
+                src="/right-flower.svg"
+                alt=""
+                width="1181"
+                height="1332"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+
+            <div className="catalog-cover__copy">
+              <p>Корпоративная коллекция</p>
+              <h3>Фарфор, который становится частью истории</h3>
+            </div>
+
+            <footer>
+              <span>Wood&Clay</span>
+              <span>2026</span>
+            </footer>
+          </article>
+
+          <div className="catalog-preview__label">
+            <span>PDF</span>
+            <p>Каталог корпоративной коллекции</p>
+          </div>
+        </div>
       </section>
 
       <section className="product-story" aria-label="Частые вопросы">

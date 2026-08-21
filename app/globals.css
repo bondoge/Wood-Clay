@@ -1575,6 +1575,18 @@ main {
   text-decoration: underline;
 }
 
+.field--consent-note {
+  margin: 18px 2px 0;
+  color: rgba(41, 23, 19, 0.5);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.field--consent-note a {
+  color: var(--oxblood);
+  text-decoration: underline;
+}
+
 .inquiry-submit:disabled {
   cursor: not-allowed;
   opacity: 0.6;

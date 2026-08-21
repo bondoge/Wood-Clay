@@ -1825,7 +1825,11 @@
   line-height: 1;
 }
 
-.product-story > p:last-child {
+/* Not :last-child — some pages (e.g. /korporativnye-podarki) put several
+   paragraphs in one .product-story, and each one needs its own top margin,
+   not just the final one. :not(.catalog-eyebrow) keeps this off the small
+   kicker line, which is also a <p> but styled completely differently. */
+.product-story > p:not(.catalog-eyebrow) {
   max-width: 730px;
   margin: 32px auto 0;
   color: #686e67;

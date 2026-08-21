@@ -215,8 +215,9 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
           </a>
 
           <nav className="site-header__nav" aria-label="Основная навигация">
+            <a href="#top">Главная</a>
             <Link href="/o-nas">О нас</Link>
-            <Link href="/korporativnye-podarki">На заказ</Link>
+            <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
             <Link href="/kontakty">Контакты</Link>
           </nav>
 

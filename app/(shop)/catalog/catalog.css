@@ -1782,6 +1782,35 @@
   margin: 0;
 }
 
+/* FAQ list — question and answer both full-width and stacked, unlike
+   .product-detail__facts' fixed 110px label column (built for short labels
+   like "Материал", not full-sentence questions). */
+.faq-list {
+  margin: 0 auto;
+  max-width: 760px;
+  border-top: 1px solid var(--catalog-line);
+  text-align: left;
+}
+
+.faq-list > div {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--catalog-line);
+}
+
+.faq-list dt {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #202620;
+}
+
+.faq-list dd {
+  margin: 0;
+  color: #686e67;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
 .product-story {
   width: min(920px, calc(100% - 64px));
   margin: 140px auto;

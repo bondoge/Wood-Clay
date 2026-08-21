@@ -48,6 +48,12 @@ export const products = pgTable(
     // Curator-set highlight flag ("Топ-30" toggle in Directus) — no site
     // behaviour reads this yet, purely for the admin's own quick-marking use.
     isTop30: boolean("is_top30").notNull().default(false),
+    // Chinese zodiac year this product is marketed as the symbol of (2024
+    // Дракон ... 2031 Свинья) — nullable, and only ever set for products
+    // whose own copy already claims symbol-of-the-year status (see
+    // scripts/backfill-symbol-year.mjs). A product just depicting a zodiac
+    // animal without that claim stays null.
+    symbolYear: integer("symbol_year"),
 
     // ---------------------------------------------------------------------
     // WB-SOURCED (dimensions) — not written by the regular catalog-seed

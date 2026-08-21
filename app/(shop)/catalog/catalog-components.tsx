@@ -8,6 +8,7 @@ import { useCart } from "./CartContext";
 import { CookieSettingsLink } from "@/components/analytics/CookieSettingsLink";
 import type { ProductView } from "./product-view";
 import { formatPrice } from "./catalog-utils";
+import { NAV_LINKS } from "./catalog-nav-links";
 
 export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "account" }) {
   return (
@@ -19,18 +20,14 @@ export function CatalogHeader({ current = "catalog" }: { current?: "catalog" | "
 
       <nav aria-label="Основная навигация">
         <Link href="/">Главная</Link>
-        <Link href="/o-nas">О нас</Link>
-        <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
-        <Link href="/kontakty">Контакты</Link>
+        {NAV_LINKS.map((link) => <Link href={link.href} key={link.href}>{link.label}</Link>)}
       </nav>
 
       <div className="catalog-nav__actions">
         <HeaderAccountActions current={current} />
         <MobileNavToggle>
           <Link href="/">Главная</Link>
-          <Link href="/o-nas">О нас</Link>
-          <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
-          <Link href="/kontakty">Контакты</Link>
+          {NAV_LINKS.map((link) => <Link href={link.href} key={link.href}>{link.label}</Link>)}
           <MobileAccountLink />
         </MobileNavToggle>
       </div>
@@ -291,6 +288,7 @@ export function CatalogFooter() {
           <nav className="footer-column" aria-label="Навигация по сайту">
             <p>Навигация</p>
             <Link href="/">Главная</Link>
+            <Link href="/novogodnie-podarki-2027">Новогодние подарки 2027</Link>
             <Link href="/o-nas">О нас</Link>
             <Link href="/kontakty">Контакты</Link>
             <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>

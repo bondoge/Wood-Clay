@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { CatalogFooter, CatalogHeader, ProductCard } from "./catalog-components";
 import { CollectionsBlock } from "./CollectionsBlock";
 import type { ProductView } from "./product-view";
@@ -64,9 +64,28 @@ type CatalogClientProps = {
   products: ProductView[];
   initialStyle?: string;
   initialCategory?: string;
+  // Task 2: category/style/intersection/gift-guide pages reuse this
+  // component's search/filter/sort/pagination wholesale (already scoped to
+  // their own server-filtered product list) but supply their own breadcrumb
+  // + unique <h1> + intro copy instead of the generic "Каталог Wood&Clay"
+  // hero, and skip the top-level style/category grid so it doesn't
+  // duplicate the page they're already on.
+  heroOverride?: ReactNode;
+  hideCollectionsBlock?: boolean;
+  // For pages whose heroOverride embeds its own transparent nav inside a
+  // full-bleed video hero (mirroring the home page's .site-header-in-.hero
+  // pattern) instead of the standard opaque CatalogHeader bar above it —
+  // currently just /novogodnie-podarki-2027.
+  hideHeader?: boolean;
+  // Rendered after the concierge section, before the footer — the "смотрите
+  // также" sibling-category/style internal links block on Task 2's new
+  // pages, kept shallow crawl depth per the brief.
+  relatedLinksSlot?: ReactNode;
 };
 
-export default function CatalogClient({ products, initialStyle, initialCategory }: CatalogClientProps) {
+export default function CatalogClient({
+  products, initialStyle, initialCategory, heroOverride, hideCollectionsBlock, hideHeader, relatedLinksSlot,
+}: CatalogClientProps) {
   const [query, setQuery] = useState("");
   const [selectedStyles, setSelectedStyles] = useState<string[]>(initialStyle ? [initialStyle] : []);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
@@ -104,6 +123,9 @@ export default function CatalogClient({ products, initialStyle, initialCategory 
       if (sort === "price-desc") return b.product.price - a.product.price;
       if (sort === "stock") return b.product.stock - a.product.stock;
       if (query) return b.score - a.score || a.index - b.index;
+      // Default relevance, no search query: curator "Топ-30" picks first
+      // (Task 2 — this season's gift-guide push), original order otherwise.
+      if (a.product.isTop30 !== b.product.isTop30) return a.product.isTop30 ? -1 : 1;
       return a.index - b.index;
     });
     return scored.map(({ product }) => product);
@@ -154,32 +176,40 @@ export default function CatalogClient({ products, initialStyle, initialCategory 
   // Links from outside the catalog (e.g. the home page's collections
   // block) land here as /catalog?style=X or /catalog?category=X — the
   // matching filter is already preselected via initialStyle/initialCategory,
-  // so just jump straight to the results once on load.
+  // so just jump straight to the results once on load. Doesn't apply when
+  // heroOverride is set (Task 2's dedicated category/style/intersection
+  // pages): the visitor navigated straight to this page's own URL, so the
+  // intro copy above the grid — the whole point of the page — should be
+  // visible on load, not scrolled past.
   useEffect(() => {
-    if (initialStyle || initialCategory) scrollToCatalog();
+    if (!heroOverride && (initialStyle || initialCategory)) scrollToCatalog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <main className="catalog-page">
-      <CatalogHeader />
+      {!hideHeader && <CatalogHeader />}
 
-      <section className="catalog-hero">
-        <div className="catalog-hero__wash" aria-hidden="true" />
-        <p className="catalog-eyebrow">Ручная работа · Фарфор · В наличии</p>
-        <h1>Каталог Wood&amp;Clay</h1>
-        <p className="catalog-hero__lead">
-          Фарфоровые игрушки и фигурки, которые станут частью семейных историй.
-          Все <strong>{products.length}</strong> изделий ниже сейчас в наличии.
-        </p>
-      </section>
+      {heroOverride ?? (
+        <section className="catalog-hero">
+          <div className="catalog-hero__wash" aria-hidden="true" />
+          <p className="catalog-eyebrow">Ручная работа · Фарфор · В наличии</p>
+          <h1>Каталог Wood&amp;Clay</h1>
+          <p className="catalog-hero__lead">
+            Фарфоровые игрушки и фигурки, которые станут частью семейных историй.
+            Все <strong>{products.length}</strong> изделий ниже сейчас в наличии.
+          </p>
+        </section>
+      )}
 
-      <CollectionsBlock
-        tiles={collectionTiles}
-        selectedStyles={selectedStyles}
-        selectedCategories={selectedCategories}
-        onSelect={selectCollection}
-      />
+      {!hideCollectionsBlock && (
+        <CollectionsBlock
+          tiles={collectionTiles}
+          selectedStyles={selectedStyles}
+          selectedCategories={selectedCategories}
+          onSelect={selectCollection}
+        />
+      )}
 
       <section className="catalog-shop" id="catalog-products" ref={catalogRef} aria-labelledby="catalog-products-heading">
         <form className="catalog-search-panel" role="search" onSubmit={handleSearchSubmit}>
@@ -356,6 +386,8 @@ export default function CatalogClient({ products, initialStyle, initialCategory 
         </div>
         <a href="https://t.me/Kiss_Love_odsk" target="_blank" rel="noreferrer">Написать консультанту <span aria-hidden="true">↗</span></a>
       </section>
+
+      {relatedLinksSlot}
 
       <CatalogFooter />
     </main>

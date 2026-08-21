@@ -5,9 +5,11 @@ import { YandexMetrika } from "@/components/analytics/YandexMetrika";
 import { OrganizationJsonLd } from "@/components/seo/OrganizationJsonLd";
 
 export const metadata: Metadata = {
-  title: "Wood&Clay — фарфоровые изделия ручной работы",
+  // Rewritten for commercial intent (Task 2) — the previous title carried no
+  // searchable query at all. Formula: {primary commercial phrase} — Wood&Clay.
+  title: "Фарфоровые ёлочные игрушки и статуэтки — Wood&Clay",
   description:
-    "Фарфоровые ёлочные игрушки, фигурки и корпоративные подарки, расписанные вручную.",
+    "Фарфоровые ёлочные игрушки, статуэтки гжель и хохлома ручной работы. Новогодние подарки, собственная мастерская, доставка по России.",
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },

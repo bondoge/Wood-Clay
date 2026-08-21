@@ -18,6 +18,9 @@ export type ProductView = {
   price: number;
   stock: number;
   images: string[];
+  // Curator "Топ-30" flag — used by CatalogClient's relevance sort (Task 2)
+  // and the "Новогодние подарки 2027" gift-guide page. Not shown as a badge.
+  isTop30: boolean;
   // WB-sourced (with packaging) — see db/schema.ts. Null until
   // scripts/backfill-wb-dimensions.mjs has matched this product, or if WB
   // never had the figure filled in for this card.
@@ -52,6 +55,7 @@ export function toProductView(product: Product): ProductView {
     price: product.priceRub,
     stock: product.stock,
     images: product.ownImages,
+    isTop30: product.isTop30,
     lengthCm: product.lengthCm,
     widthCm: product.widthCm,
     heightCm: product.heightCm,

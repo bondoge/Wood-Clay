@@ -1,7 +1,8 @@
-import { and, count, eq, gt, ne, or } from "drizzle-orm";
+import { and, count, eq, gt, ilike, isNotNull, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
 import { productSelectSchema, type Product, type Style } from "@/db/validators";
+import type { CategoryDef } from "@/lib/catalog-taxonomy";
 
 /**
  * Every query here filters `published = true` in SQL — there is no
@@ -49,6 +50,68 @@ export async function byStyle(style: Style): Promise<Product[]> {
     .select()
     .from(products)
     .where(and(eq(products.published, true), eq(products.style, style)));
+  return parseRowsLenient(rows);
+}
+
+// A category is either an exact product_type match, or (for Олимпийский
+// мишка, not a real WB category) an all-tokens-present title match — see
+// lib/catalog-taxonomy.ts's CategoryDef.
+function categoryWhereClause(def: CategoryDef) {
+  if (def.titleIncludesAll) {
+    return and(...def.titleIncludesAll.map((token) => ilike(products.ownTitle, `%${token}%`)));
+  }
+  return eq(products.productType, def.productType!);
+}
+
+export async function byCategory(def: CategoryDef): Promise<Product[]> {
+  const rows = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.published, true), categoryWhereClause(def)));
+  return parseRowsLenient(rows);
+}
+
+export async function byStyleAndCategory(style: Style, def: CategoryDef): Promise<Product[]> {
+  const rows = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.published, true), eq(products.style, style), categoryWhereClause(def)));
+  return parseRowsLenient(rows);
+}
+
+export async function bySymbolYear(year: number): Promise<Product[]> {
+  const rows = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.published, true), eq(products.symbolYear, year)));
+  return parseRowsLenient(rows);
+}
+
+// Every distinct symbol_year with at least `minCount` published products —
+// this is what makes /catalog/simvol-goda-{year} pages regenerate on their
+// own each year (see lib/catalog-taxonomy.ts's MIN_SYMBOL_YEAR_PRODUCTS):
+// a year only gets a page once real stock clears the threshold, with no
+// code change needed as new years get backfilled or old stock sells out.
+export async function distinctSymbolYears(minCount: number): Promise<number[]> {
+  const rows = await db
+    .select({ year: products.symbolYear, count: count() })
+    .from(products)
+    .where(and(eq(products.published, true), isNotNull(products.symbolYear)))
+    .groupBy(products.symbolYear);
+  return rows
+    .filter((row) => row.count >= minCount)
+    .map((row) => row.year as number)
+    .sort((a, b) => a - b);
+}
+
+// "Новогодние подарки 2027" — the curator's is_top30 flag, used exactly as
+// flagged (no additional New-Year-relevance filtering — resolved with the
+// user, see plan for Task 2).
+export async function listTop30(): Promise<Product[]> {
+  const rows = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.published, true), eq(products.isTop30, true)));
   return parseRowsLenient(rows);
 }
 

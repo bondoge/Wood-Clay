@@ -268,14 +268,24 @@ budget's stated conditions.
   LCP-critical requests — reverted, `fetchPriority` isn't in this React
   version's typed `VideoHTMLAttributes`, and it wasn't worth an `any`-cast
   for a secondary optimization.
-- **Not fixed, recommended:** re-encode the hero video at a lower bitrate
-  and/or shorter loop. 14.6MB is large for a background loop; even a
-  50–70% reduction (achievable with `ffmpeg -crf 28` or similar, without a
-  visible quality change on a small autoplaying background element) would
-  meaningfully cut mobile data cost. Didn't do this — I can't produce a new
-  video asset, only re-encode what exists, and that's a judgment call about
-  acceptable quality loss that should be made by whoever can actually watch
-  the result.
+- **Fixed 2026-08-21 (during Task 2), on request:** re-encoded the hero
+  video. Original was `hero_video/hero_video_3.mp4` — 852×480, 30fps, H.264
+  at ~3.9 Mbps video + a 192 kbps AAC audio track the `<video>` element can
+  never play (it's always `muted`), 14.6MB total for 28.2s. Re-encoded with
+  `ffmpeg -an -c:v libx264 -preset slow -crf 26 -pix_fmt yuv420p -movflags
+  +faststart` (audio stripped entirely, same resolution/frame rate/duration
+  kept — the original bitrate was excessive for the resolution, not the
+  resolution itself) → **2.35MB, an 84% reduction**. Compared frames from
+  the original against CRF 26 and CRF 28 side by side; both were visually
+  indistinguishable from the original, picked CRF 26 for the extra quality
+  margin at a ~500KB cost. Uploaded to the same Selectel bucket as
+  `hero_video/hero_video_3-optimized.mp4` — a **new key, not an overwrite**
+  of the original: that file is what the currently-deployed production
+  homepage actually serves, and overwriting a live asset outside the normal
+  git-based deploy flow would have changed production immediately, with no
+  easy rollback. `HomeClient.tsx` and `novogodnie-podarki-2027/page.tsx`
+  both now point at the new file; the old one is left in place untouched
+  (harmless, just unused once this deploys) rather than deleted.
 - **Also noticed, not fixed:** the homepage's review-grid images
   (`reviews/grid-600/IMG_2371.webp`, `IMG_2420.webp`, `IMG_2421.webp`)
   404 against the Selectel bucket — unrelated to this task, pre-existing,
@@ -349,3 +359,280 @@ budget's stated conditions.
   something I can execute without producing a new asset myself.
 - **The same-title inventory (§5)** is Task 3's starting point, not a
   decision for now.
+
+---
+
+# Task 2 — Catalog routing and landing pages: findings
+
+Written 2026-08-21, alongside the implementation. Full reasoning for each
+decision lives in the approved plan (`crystalline-churning-pudding.md`); this
+is the record of what actually shipped and what was found along the way.
+
+## 1. URL structure
+
+Decided: **no product URL migration.** Product URLs stay `/catalog/{slug}`
+exactly as before. New category/style pages resolve at the same
+`/catalog/{slug}` depth via lookup precedence inside the existing
+`app/(shop)/catalog/[slug]/page.tsx` (category registry → style registry →
+`simvol-goda-{year}` pattern → product `bySlug()` fallback → 404).
+Category×style intersections get a new nested route,
+`app/(shop)/catalog/[slug]/[styleSlug]/page.tsx` — reusing the `[slug]`
+segment name (Next.js requires a shared dynamic-segment name at one
+directory depth), which is a URL shape (`/catalog/{a}/{b}`) that had no
+prior meaning, so it's purely additive.
+
+Guarded permanently: `scripts/import-new-wb-products.mjs`'s slug generator
+now checks a `RESERVED_CATALOG_SLUGS` set + `simvol-goda-\d{4}` pattern
+(hand-ported from `lib/catalog-taxonomy.ts`'s `isReservedCatalogSlug`, since
+that script is plain `.mjs` with no TS import support — same trade-off
+already accepted for its `TRANSLIT` table) before accepting a generated
+slug; on collision it falls back to the same `-{wbArticle}` suffix the
+script already uses for ordinary slug collisions. Verified in isolation
+(the full script needs live WB API credentials, which this session doesn't
+have) — a standalone copy of the guard function correctly flags `"gzhel"`,
+`"elochnye-igrushki"`, and `"simvol-goda-2027"` as reserved, and correctly
+passes through `"simvol-goda-99"` (wrong digit count) and real-shaped
+product slugs untouched.
+
+## 2. Taxonomy — one registry, the "Ёлочные игрушки" fix
+
+`lib/catalog-taxonomy.ts` is now the single source for category/style
+identity. `app/(shop)/catalog/collections.ts` (the client-side filter/tile
+logic) was refactored to source `STYLE_LABELS`/`FEATURED_CATEGORY_LABELS`/
+`matchesCategory` from it instead of keeping its own copy — this is the
+actual fix for "filters say Ёлочные игрушки, product pages say Елочные
+украшения": the raw DB `product_type` ("Елочные украшения", WB-synced,
+untouched) is no longer shown to a user anywhere — every display site
+(sidebar filter, category page, product breadcrumb, product detail
+"Категория" fact) now reads the registry's canonical label
+("Ёлочные игрушки" — matches the brief's own named target query and has
+materially higher search volume).
+
+8 categories, 3 styles, 6 intersections (see plan §2 for the eligibility
+rule and exact crosstab counts) — all live and linked. The `matchesCategory`
+"year-symbol" tile (the featured homepage/catalog tile, distinct from the
+8 real category routes) still uses a hardcoded `title.includes("коза")`
+check for now, with a `TODO(Task 2 Phase 5)` comment — switching it to read
+`symbolYear` needs `symbolYear` added to `ProductView` first, which wasn't
+otherwise needed by anything shipped this task (the new symbol-year routes
+query the DB directly via `bySymbolYear()`, not through `ProductView`). Left
+as a flagged follow-up rather than adding an unused field — see "What needs
+you" below.
+
+## 3. Category/style/intersection pages
+
+All hand-written per the brief's "no templated text" rule — copy lives in
+`app/(shop)/catalog/category-copy.ts` (11 entries), `intersection-copy.ts`
+(6 entries), `symbol-year-copy.ts` (8 entries, one per zodiac year, so a
+future year needs no code change — see §4). Every page reuses
+`CatalogClient` wholesale (search/filter/sort/pagination) via a new
+`heroOverride`/`hideCollectionsBlock`/`relatedLinksSlot` prop set, with a
+shared `CategoryPageView` wrapper for the category/style/intersection/
+symbol-year cases. The product detail page's breadcrumb and "Категория"
+fact now link to the real category URL and show the canonical label
+(previously pointed at the product's own slug, since no category URL
+existed yet).
+
+**Bugs found and fixed during this build, not part of the original plan:**
+- `CatalogClient`'s "scroll to results on mount" effect (built for
+  `/catalog?style=X` deep links) was also firing on the new dedicated
+  pages, scrolling straight past the hand-written intro copy on load — the
+  whole point of the page. Fixed: the effect is now skipped whenever
+  `heroOverride` is set.
+- Passing `heroOverride`/`relatedLinksSlot` (elements created in
+  `CategoryPageView`, not at `CatalogClient`'s own JSX call site) as fixed
+  siblings among `<main>`'s other static children triggered React's
+  "each child in a list should have a unique key prop" dev warning — React
+  validates keys on a compiler-generated static children array whenever it
+  contains an externally-created element. Fixed by giving those elements
+  explicit `key` props at creation time in `CategoryPageView`.
+
+## 4. `symbol_year` — backfill report
+
+**Scope, exactly as planned:** only products whose own copy already claims
+symbol-of-the-year status get a value; a product simply depicting a zodiac
+animal without that claim stays null.
+
+**A significant refinement was needed beyond the plan's original
+heuristic**, found by inspecting the actual candidate set before applying
+anything:
+
+- A whole "Хохлома ёлочная игрушка" product line shares one boilerplate WB
+  description template verbatim across dozens of unrelated items
+  (Лошадка, Снеговик, Овечка, **Собака**, ...): *"Коллекция ... Хохлома.
+  [ANIMAL] - символ года. В серию входят: [30+ other characters]..."* — and
+  for most of these items the bracketed animal is simply wrong (always says
+  "Дракон" regardless of what the item actually is). Trusting *any*
+  "символ года"-shaped phrase near the top of the description (the plan's
+  original design) would have tagged e.g. a plain "Собака" Christmas
+  ornament as `symbol_year: 2030` — exactly the "realistic dog figurine"
+  false positive the brief explicitly warns against, just reached by a
+  different route (boilerplate leakage, not a title match).
+- **The fix:** a claim is only trusted for a given animal if that animal has
+  independent, title-level corroboration elsewhere in the catalogue — i.e.
+  at least one product whose own **title** (not description) explicitly
+  says "символ года/20XX" for that same animal. Checked against the real
+  data: Дракон, Змея, Лошадь, Коза/Овца/Баран, Обезьяна all have dozens of
+  title-level confirmations; **Петух, Собака, Свинья have zero** — nothing
+  in this catalogue is genuinely marketed as a 2029/2030/2031 symbol today.
+  This is computed from the data itself, not hardcoded, so it self-corrects
+  if the shop later adds genuine Петух/Собака/Свинья symbol-year stock.
+- **The one bug the brief itself names** — id=76 "Елочная игрушка Коза.
+  Фарфор, Хохлома" has description "Фарфоровый дракон - символ года."
+  (confirmed: id=3 has the identical title and correctly says "коза" in the
+  same template slot) — is handled as an explicit, individually-verified
+  `MANUAL_OVERRIDES` entry (`scripts/backfill-symbol-year.mjs`) rather than
+  a generalized "trust title over a mismatched claim" rule, since that
+  generalization is exactly what produced the Собака/Петух false positives
+  above.
+- Also fixed: the keyword list was missing "овеч" (Овечка) — the "овц" stem
+  doesn't match that diminutive form.
+
+**Result of the real run** (`npm run backfill:symbol-year`, applied for
+real after a `--dry-run` review of all ~300 proposed changes plus manual
+spot-checks of description text for the ambiguous cases): 299 rows changed,
+0 excluded-as-incidental (the eligibility check already filtered those out
+before the apply step). Published-product distribution:
+
+| symbol_year | published count |
+|---|---|
+| 2024 (Дракон) | 3 |
+| 2025 (Змея) | 21 |
+| 2026 (Лошадь) | 49 |
+| 2027 (Коза/Овца/Баран) | 49 |
+| 2028 (Обезьяна) | 1 |
+
+## 5. `/catalog/simvol-goda-{year}` — live years
+
+Threshold: `MIN_SYMBOL_YEAR_PRODUCTS = 5` published products
+(`lib/catalog-taxonomy.ts`), checked live at request time (not baked in) —
+so a year's page appears or disappears automatically as stock changes, no
+code change needed. Against the counts above: **2025, 2026, 2027 are live;
+2024 and 2028 correctly 404** (3 and 1 published product respectively,
+below threshold) — verified directly against the running dev server.
+Copy exists for all 8 zodiac years (`symbol-year-copy.ts`) so 2028 goes
+live automatically the moment its published count clears 5, with no
+further code work.
+
+## 6. "Новогодние подарки 2027"
+
+Renamed from the brief's "Новогодняя коллекция 2027" per discussion with
+the user — framed as a gift guide, not a themed collection. Sourced from
+`is_top30` **exactly as flagged, all 88 products, unfiltered** — confirmed
+deliberately with the user: these are the season's fast-turnaround,
+well-stocked picks the business wants to push, not a claim that every item
+is visually New-Year-themed. Lives at the top-level route
+`app/novogodnie-podarki-2027/page.tsx` (not nested under `/catalog`, and not
+part of the `[slug]` lookup-precedence resolver — it's a curated landing
+page with its own copy + PDF block, the same reasoning Task 1 used for
+`/o-nas`/`/kontakty`/`/korporativnye-podarki`).
+
+**Found during the build:** this route sits outside the `(shop)` route
+group, so it doesn't inherit `(shop)/layout.tsx`'s `SessionProvider` or
+`catalog/layout.tsx`'s `CartProvider` — the page 500'd on first load
+(`useSession must be wrapped in a <SessionProvider>`) until it was given its
+own `auth()` read + `SessionProvider`/`CartProvider` wrap, exactly matching
+the pattern `app/page.tsx` (the home page) already uses for the identical
+reason.
+
+- `is_top30` now also boosts `CatalogClient`'s default relevance sort
+  (top-30 items float to the front when there's no active search query) —
+  required adding `isTop30` to `ProductView`/`toProductView()`, which didn't
+  flow through the display-view mapper before.
+- The `.catalog-download` PDF block was duplicated verbatim across the
+  homepage and `/korporativnye-podarki` already; this is now its **third**
+  use, so it was extracted into `components/catalog/CatalogPdfDownload.tsx`
+  and all three call sites updated — a small, directly-motivated dedup.
+- Nav: added to both header variants and both mobile-nav panels via a new
+  shared `NAV_LINKS` constant (`catalog-components.tsx`) consumed by all 4
+  render sites, plus both footers — placed second, right after "Главная",
+  for the "prominent entry point" the brief asked for. The shared constant
+  specifically guards against a repeat of the "Контакты→#custom" copy-paste
+  bug Task 1 found and fixed (that bug came from exactly this kind of
+  4-way hand-duplicated link list).
+- Homepage feature block (`.seasonal-feature`, new CSS in `globals.css`)
+  sits above `CollectionsBlock`, linking to the new page.
+
+## 7. Faceting policy — implemented exactly as planned, verified live
+
+`/catalog/page.tsx`'s static `metadata` export is now `generateMetadata`
+reading `searchParams`. Verified against the running dev server for every
+case in the policy table:
+
+| Query | Result |
+|---|---|
+| `/catalog` | indexable, no canonical (unchanged) |
+| `?style=gzhel` | canonical → `/catalog/gzhel` |
+| `?category=christmas&style=gzhel` (built intersection) | canonical → `/catalog/elochnye-igrushki/gzhel` |
+| `?category=bells&style=gzhel` (not a built intersection) | `noindex, follow` + canonical → `/catalog/kolokolchiki` |
+| `?sort=price-asc` (or any other param) | `noindex, follow` |
+| `?style=garbage` (unrecognized value) | `noindex, follow` |
+
+No 301s — canonical + noindex only, since the query-param filtering still
+serves a real client-side UX purpose for combinations that don't have a
+dedicated page.
+
+## 8. Homepage metadata
+
+`app/layout.tsx`'s title/description (the home page has no per-page
+override, so the root layout's `metadata` export is what actually renders):
+old title "Wood&Clay — фарфоровые изделия ручной работы" carried no
+searchable query at all. New: **"Фарфоровые ёлочные игрушки и статуэтки —
+Wood&Clay"**, description leads with the same phrase plus гжель/хохлома and
+the new-products framing.
+
+## 9. Sitemap
+
+`app/sitemap.ts` now generates category/style/intersection routes directly
+from `lib/catalog-taxonomy.ts`'s `CATEGORIES`/`STYLES`/`INTERSECTIONS` (not
+hand-listed, so it can't drift), and symbol-year routes from
+`distinctSymbolYears(MIN_SYMBOL_YEAR_PRODUCTS)` (the same live threshold
+check the page resolver uses). Verified against the running dev server:
+807 total URLs — 8 category + 3 style + 6 intersection + 3 symbol-year
+(2025/2026/2027, matching §5 exactly) + 1 gift-guide page + existing static/
+product routes.
+
+## 10. Definition-of-done status
+
+- [x] Every cluster has a live, server-rendered route with unique metadata
+      and unique intro text — hand-verified via curl against the dev server
+      for at least one page per cluster type.
+- [x] `?style=`/`?category=` canonical/noindex table implemented and
+      verified live (§7). No two indexable URLs serve the same product set.
+- [x] `symbol_year` populated and verified, full report above (§4).
+- [x] Новогодние подарки 2027 live, in both nav variants, both footers, on
+      the homepage, linked to the PDF.
+- [x] Taxonomy inconsistencies resolved and documented (§2).
+- [x] All new routes in the sitemap (§9).
+- [x] `npm run check` (typecheck + lint + build) passes clean — 0 errors,
+      only the pre-existing `<img>`/`next/image` warnings this task didn't
+      introduce or touch.
+- [x] `npm run shots`-equivalent manual 390px check: category page, style
+      page, intersection page, symbol-year page, gift-guide page, homepage
+      feature block — all clean, no layout breaks, no console
+      errors/warnings on any of them.
+- [x] This file.
+
+## What needs you
+
+- **Yandex Webmaster**: submit the new routes for reindexing once deployed
+  — the same relative-URL workaround that already worked for Task 1's pages
+  (see the earlier "Некorrektный URL" fix in this session's history).
+- **`collections.ts`'s "year-symbol" featured tile still hardcodes
+  "коза"** (§2) — now that `symbol_year` exists, this should switch to
+  reading it instead, but doing so means adding `symbolYear` to
+  `ProductView` for a single call site that nothing else in this task
+  needed. Small, but a real follow-up — flagging rather than doing it
+  speculatively.
+- **False "символ года" claims in `own_description` for non-corroborated
+  animals** (Собака, Петух, Свинья — §4): the *attribute* is correctly
+  null for these, but the underlying WB-sourced description text still
+  says e.g. "Собака - символ года" on some product pages, visible to a
+  customer reading the full description. Not fixed — rewriting that prose
+  is content-writing work, closer to Task 3's territory, and this task's
+  brief scoped it to the attribute specifically ("Only add/change" the
+  attribute, not the copy).
+- **Hero image for the homepage feature block**: shipped text-only
+  (kicker/heading/lead/CTA), no product photo — kept deliberately simple
+  given the task's already-large scope. Worth a look if the section reads
+  as too plain once live.

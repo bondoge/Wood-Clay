@@ -7,12 +7,12 @@ import { HeaderAccountActions, MobileAccountLink, MobileNavToggle } from "./(sho
 import type { CollectionTile } from "./(shop)/catalog/collections";
 import { CookieSettingsLink } from "@/components/analytics/CookieSettingsLink";
 import { CorporateInquiryForm } from "./(shop)/korporativnye-podarki/CorporateInquiryForm";
+import { CatalogPdfDownload } from "@/components/catalog/CatalogPdfDownload";
+import { NAV_LINKS } from "./(shop)/catalog/catalog-nav-links";
+import { tileHref } from "@/lib/catalog-taxonomy";
 
 const BASE_URL =
   "https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/reviews/";
-
-const CATALOG_PDF_URL =
-  "https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/documents/catalog.pdf";
 
 const CATALOG_HREF = "/catalog";
 const ACCOUNT_HREF = "/account";
@@ -195,7 +195,7 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
           aria-hidden="true"
         >
           <source
-            src="https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/hero_video/hero_video_3.mp4"
+            src="https://1bdb1afd-641e-4c4c-be89-1010e798b2e5.selstorage.ru/hero_video/hero_video_3-optimized.mp4"
             type="video/mp4"
           />
         </video>
@@ -221,18 +221,14 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
 
           <nav className="site-header__nav" aria-label="Основная навигация">
             <a href="#top">Главная</a>
-            <Link href="/o-nas">О нас</Link>
-            <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
-            <Link href="/kontakty">Контакты</Link>
+            {NAV_LINKS.map((link) => <Link href={link.href} key={link.href}>{link.label}</Link>)}
           </nav>
 
           <nav className="site-header__actions" aria-label="Каталог, кабинет и корзина">
             <HeaderAccountActions />
             <MobileNavToggle>
               <a href="#top">Главная</a>
-              <Link href="/o-nas">О нас</Link>
-              <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>
-              <Link href="/kontakty">Контакты</Link>
+              {NAV_LINKS.map((link) => <Link href={link.href} key={link.href}>{link.label}</Link>)}
               <MobileAccountLink />
             </MobileNavToggle>
           </nav>
@@ -427,10 +423,26 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
         </p>
       </section>
 
+      <section className="seasonal-feature" aria-labelledby="seasonal-feature-heading">
+        <div className="seasonal-feature__copy">
+          <p className="section-kicker">Сезонная подборка</p>
+          <h2 id="seasonal-feature-heading">Новогодние подарки 2027</h2>
+          <p className="seasonal-feature__lead">
+            88 изделий с быстрым производством и хорошим наличием — то, что
+            точно успеет приехать к празднику. Символ года, ёлочные игрушки,
+            фигурки и небольшие подарки, расписанные вручную.
+          </p>
+          <Link className="seasonal-feature__cta" href="/novogodnie-podarki-2027">
+            <span>Смотреть подборку</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      </section>
+
       <CollectionsBlock
         tiles={collectionTiles}
         ctaLabel="Смотреть каталог"
-        hrefFor={(kind, id) => `/catalog?${kind}=${encodeURIComponent(id)}`}
+        hrefFor={(kind, id) => tileHref(kind, id) ?? `/catalog?${kind}=${encodeURIComponent(id)}`}
       />
 
       <section className="bulk-order" id="custom" aria-labelledby="bulk-order-heading">
@@ -471,102 +483,7 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
         <CorporateInquiryForm />
       </section>
 
-      <section
-        className="catalog-download"
-        id="catalog-pdf"
-        aria-labelledby="catalog-download-heading"
-      >
-        <div className="catalog-download__copy">
-          <p className="catalog-download__kicker">Каталог для бизнеса</p>
-          <h2 id="catalog-download-heading">
-            Коллекция, которую удобно переслать.
-          </h2>
-          <p className="catalog-download__lead">
-            Один файл для закупочной команды: направления коллекции, варианты
-            росписи, упаковка и возможности корпоративного оформления.
-          </p>
-
-          <div className="catalog-download__details" aria-label="О каталоге">
-            <div>
-              <span>Формат</span>
-              <strong>PDF</strong>
-            </div>
-            <div>
-              <span>Внутри</span>
-              <strong>Коллекции и условия</strong>
-            </div>
-            <div>
-              <span>Для кого</span>
-              <strong>Компании и агентства</strong>
-            </div>
-          </div>
-
-          <a
-            className="catalog-download__button"
-            href={CATALOG_PDF_URL}
-            download
-            aria-label="Скачать PDF-каталог"
-          >
-            <span>Скачать PDF-каталог</span>
-            <span aria-hidden="true">↓</span>
-          </a>
-          <p className="catalog-download__note">
-            Можно сохранить, распечатать или отправить коллегам.
-          </p>
-        </div>
-
-        <div className="catalog-preview" aria-hidden="true">
-          <span className="catalog-preview__shadow" />
-          <span className="catalog-preview__sheet catalog-preview__sheet--back" />
-          <span className="catalog-preview__sheet catalog-preview__sheet--middle" />
-
-          <article className="catalog-cover">
-            <header className="catalog-cover__brand">
-              <img
-                className="catalog-cover__mark"
-                src="/woodclay-mark.png"
-                alt=""
-                width="76"
-                height="58"
-              />
-              <img
-                className="catalog-cover__wordmark"
-                src="/woodclay-wordmark.svg"
-                alt=""
-                width="100"
-                height="19"
-              />
-            </header>
-
-            <div className="catalog-cover__art">
-              <span />
-              <img
-                src="/right-flower.svg"
-                alt=""
-                width="1181"
-                height="1332"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-
-            <div className="catalog-cover__copy">
-              <p>Корпоративная коллекция</p>
-              <h3>Фарфор, который становится частью истории</h3>
-            </div>
-
-            <footer>
-              <span>Wood&Clay</span>
-              <span>2026</span>
-            </footer>
-          </article>
-
-          <div className="catalog-preview__label">
-            <span>PDF</span>
-            <p>Каталог корпоративной коллекции</p>
-          </div>
-        </div>
-      </section>
+      <CatalogPdfDownload id="catalog-pdf" />
     </main>
 
     <footer className="site-footer" id="contacts">
@@ -593,6 +510,7 @@ export default function HomeClient({ collectionTiles }: { collectionTiles: Colle
           <nav className="footer-column" aria-label="Навигация по сайту">
             <p>Навигация</p>
             <a href="#top">Главная</a>
+            <Link href="/novogodnie-podarki-2027">Новогодние подарки 2027</Link>
             <Link href="/o-nas">О нас</Link>
             <Link href="/kontakty">Контакты</Link>
             <Link href="/korporativnye-podarki">Корпоративным клиентам</Link>

@@ -205,6 +205,24 @@ function slugFromTitle(title, wbArticle) {
   return slugify(title) || `product-${wbArticle}`;
 }
 
+// --- reserved catalog slugs (lib/catalog-taxonomy.ts) ----------------------
+// A generated slug must never collide with a category/style/symbol-year
+// route (Task 2's "URL structure" decision: those routes resolve by lookup
+// precedence at /catalog/{slug}, ahead of the product lookup, so a colliding
+// product slug would become permanently unreachable). Keep this list in
+// sync with CATEGORIES/STYLES in lib/catalog-taxonomy.ts if either changes —
+// same manual-port trade-off already accepted for the TRANSLIT table above
+// (this is a plain .mjs script with no TS import support).
+const RESERVED_CATALOG_SLUGS = new Set([
+  "elochnye-igrushki", "figurki-i-statuetki", "kolokolchiki", "ukrasheniya",
+  "yaytsa-suvenirnye", "matryoshki", "podsvechniki", "olimpiyskiy-mishka",
+  "gzhel", "khokhloma", "avtorskaya-rospis",
+]);
+const RESERVED_SLUG_PATTERN = /^simvol-goda-\d{4}$/;
+function isReservedCatalogSlug(slug) {
+  return RESERVED_CATALOG_SLUGS.has(slug) || RESERVED_SLUG_PATTERN.test(slug);
+}
+
 // --- images: mirror to our S3 bucket (catalog-seed/src/images.ts + s3.ts) --
 const s3 = new S3Client({
   endpoint: `https://${process.env.S3_ENDPOINT}`,
@@ -291,7 +309,7 @@ for (const { account, contentKey, pricesKey } of ACCOUNTS) {
     const style = classify({ vendorCode: card.vendorCode, productType, title, description });
 
     let slug = slugFromTitle(title, wbArticle);
-    if (existingSlugs.has(slug)) slug = `${slug}-${wbArticle}`;
+    if (existingSlugs.has(slug) || isReservedCatalogSlug(slug)) slug = `${slug}-${wbArticle}`;
     existingSlugs.add(slug);
 
     const priceRub = prices.get(card.nmID) ?? 0;

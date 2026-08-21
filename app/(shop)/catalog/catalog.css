@@ -375,6 +375,16 @@
   transform: translateX(-50%);
 }
 
+/* app/globals.css hides .hero__scroll below 680px for the home page's own
+   hero (full-screen there, scrolling is the obvious next move). Two
+   classes beats the one-class rule it overrides regardless of source
+   order, so this survives however the two stylesheets end up bundled. */
+@media (max-width: 680px) {
+  .hero__scroll.hero__scroll--gift {
+    display: flex;
+  }
+}
+
 .catalog-eyebrow {
   margin: 0 0 18px;
   color: #9a7545;
@@ -734,12 +744,22 @@
   z-index: 15;
 }
 
+/* Content-hugging flex, not grid with a 1fr middle column: the grid
+   version made the "По релевантности" element's own box stretch to fill
+   the leftover width in a 250px-min-width button, while the text inside it
+   stayed left-aligned — so the visible text ended well before its box did,
+   leaving real empty space between the text and the arrow that no amount
+   of gap tuning could remove (confirmed by outlining each element's actual
+   box in a screenshot — the box was consistently ~30-40px wider than the
+   glyphs). Flex with no flex-grow on any child means every item — label,
+   value, arrow — sizes to its own content and sits directly next to its
+   neighbour with just the one 10px gap; the button's width now simply
+   follows whichever option is selected instead of being pinned to a fixed
+   250px that most options don't fill. */
 .catalog-sort-dropdown > button {
-  min-width: 250px;
   height: 50px;
   padding: 0 15px 0 18px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
   border: 1px solid rgba(25,31,24,.06);
@@ -1395,7 +1415,6 @@
   }
 
   .catalog-sort-dropdown > button {
-    min-width: 174px;
     height: 44px;
     padding: 0 11px;
   }
@@ -1859,10 +1878,39 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* Task 2's category/style/intersection/symbol-year pages: a short internal
+   links block ("Смотрите также") to sibling categories/styles, kept shallow
+   in crawl depth — same idea as .related-products, no card imagery needed. */
+.catalog-related-links {
+  width: min(1420px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 20px 0 80px;
+}
+
+.catalog-related-links nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.catalog-related-links nav a {
+  padding: 9px 16px;
+  border: 1px solid var(--catalog-line);
+  border-radius: 999px;
+  color: var(--catalog-ink);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.catalog-related-links nav a:hover {
+  background: rgba(38, 49, 39, 0.06);
+}
+
 @media (max-width: 800px) {
   .product-breadcrumbs,
   .product-detail,
-  .product-story {
+  .product-story,
+  .catalog-related-links {
     width: calc(100% - 36px);
   }
 
